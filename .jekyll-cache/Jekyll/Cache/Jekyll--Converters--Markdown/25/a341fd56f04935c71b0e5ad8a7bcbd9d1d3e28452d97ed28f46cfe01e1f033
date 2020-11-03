@@ -1,0 +1,9 @@
+I"3<p>Every time I begin a machine learning (ML) project, I go through more or less the same steps.
+I start by quickly hacking a model prototype and a training script.
+After a few days, the codebase grows unruly and any modification is starting to take unreasonably long time due to badly-handled dependencies and the general lack of structure.
+At this point, I decide that some refactoring is needed:
+parts of the model are wrapped into separate, meaningful objects, and the training script gets somewhat general structure, with clearly delineated sections.
+Further down the line, I am often faced with the need of supporting multiple datasets and a variety of models, where the differences between model variants are much more than just hyperparameters - they often differ structurally and have different inputs or outputs.
+At this point, I start copying training scripts to support model variants.
+It is straightforward to set up, but maintenance becomes a nightmare: with copies of the code living in separate files, any modification has to be applied to all the files.</p>
+:ET

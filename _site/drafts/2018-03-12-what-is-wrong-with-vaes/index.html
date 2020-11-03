@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <!-- <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+  <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>What is wrong with VAEs?</title>
+  <meta name="description" content="Latent Variable ModelsSuppose you would like to model the world in terms of the probability distribution over its possible states  with .The world may be com...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/drafts/2018-03-12-what-is-wrong-with-vaes/">
+  <link rel="alternate" type="application/rss+xml" title="Research Notes" href="http://localhost:4000/feed.xml">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/css/blogposts.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:4000/resources/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:4000/resources/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:4000/resources/favicon/favicon-16x16.png">
+<link rel="manifest" href="http://localhost:4000/resources/favicon/site.webmanifest">
+<link rel="mask-icon" href="http://localhost:4000/resources/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+<!--https://realfavicongenerator.net/favicon_result?file_id=p1e445a6m31cgavri1pnl1i0nojp6#.Xnjq_5NKhhE
+-->
+</head>
+
+
+  <body>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111274068-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-111274068-3');
+</script>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Research Notes</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">What is wrong with VAEs?</h1>
+    <p class="post-meta"><time datetime="2018-03-01T16:15:00+01:00" itemprop="datePublished">Mar 1, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="latent-variable-models">Latent Variable Models</h1>
+<p>Suppose you would like to model the world in terms of the probability distribution over its possible states <script type="math/tex">p(\mathbf{x})</script> with <script type="math/tex">\mathbf{x} \in \mathcal{R}^D</script>.
+The world may be complicated and we do not know what form <script type="math/tex">p(\mathbf{x})</script> should have.
+To account for it, we introduce another variable <script type="math/tex">\mathbf{z} \in \mathcal{R}^d</script>, which describes, or explains the content of <script type="math/tex">\mathbf{x}</script>.
+If <script type="math/tex">\mathbf{x}</script> is an image, <script type="math/tex">\mathbf{z}</script> can contain information about the number, type and appearance of objects visible in the scene as well as the background and lighting conditions.
+This new variable allows us to express <script type="math/tex">p(\mathbf{x})</script> as an infinite mixture model,</p>
+
+<script type="math/tex; mode=display">p(\mathbf{x}) = \int p(\mathbf{x} \mid \mathbf{z}) p(\mathbf{z})~d \mathbf{z}. \tag{1}</script>
+
+<p>It is a mixture model, because for every possible value of <script type="math/tex">\mathbf{z}</script>, we add another conditional distribution to <script type="math/tex">p(\mathbf{x})</script>, weighted by its probability.</p>
+
+<p>Having a setup like that, it is interesting to ask what the latent variables <script type="math/tex">\mathbf{z}</script> are, given an observation <script type="math/tex">\mathbf{x}</script>.
+Namely, we would like to know the posterior distribution <script type="math/tex">p(\mathbf{z} \mid \mathbf{x})</script>.
+However, the relationship between <script type="math/tex">\mathbf{z}</script> and <script type="math/tex">\mathbf{x}</script> can be highly non-linear (<em>e.g.</em> implemented by a multi-layer neural network) and both <script type="math/tex">D</script>, the dimensionality of our observations, and <script type="math/tex">d</script>, the dimensionality of the latent variable, can be quite large.
+Since both marginal and posterior probability distributions require evaluation of the integral in eq. (1), they are intractable.</p>
+
+<p>We could try to approximate eq. (1) by Monte-Carlo sampling as <script type="math/tex">p(\mathbf{x}) \approx \frac{1}{M} \sum_{m=1}^M p(\mathbf{x} \mid \mathbf{z}^{(m)})</script>, <script type="math/tex">\mathbf{z}^{(m)} \sim p(\mathbf{z})</script>, but since the volume of <script type="math/tex">\mathbf{z}</script>-space is potentially large, we would need millions of samples of <script type="math/tex">\mathbf{z}</script> to get a reliable estimate.</p>
+
+<p>To train a probabilistic model, we can use a parametric distribution - parametrised by a neural network with parameters <script type="math/tex">\theta \in \Theta</script>.
+We can now learn the parameters by maximum likelihood estimation,</p>
+
+<script type="math/tex; mode=display">\theta^\star = \arg \max_{\theta \in \Theta} p_\theta(\mathbf{x}). \tag{2}</script>
+
+<p>The problem is, we cannot maximise an expression (eq. (1)), which we can’t even evaluate.
+To improve things, we can resort to <a href="https://en.wikipedia.org/wiki/Importance_sampling">importance sampling (IS)</a>.
+When we need to evaluate an expectation with respect to the original (<em>nominal</em>) probability density function (<em>pdf</em>), IS allows us to sample from a different probability distribution (<em>proposal</em>) and then weigh those samples with respect to the nominal pdf.
+Let <script type="math/tex">q_\phi ( \mathbf{z} \mid \mathbf{x})</script> be our proposal - a probability distribution parametrised by a neural network with parameters <script type="math/tex">\phi \in \Phi</script>.
+We can write</p>
+
+<script type="math/tex; mode=display">p_\theta(\mathbf{x}) = \int p(\mathbf{z}) p_\theta (\mathbf{x} \mid \mathbf{z})~d \mathbf{z} =\\
+  \mathbb{E}_{p(\mathbf{z})} \left[ p_\theta (\mathbf{x} \mid \mathbf{z} )\right] =
+  \mathbb{E}_{p(\mathbf{z})} \left[ \frac{q_\phi ( \mathbf{z} \mid \mathbf{x})}{q_\phi ( \mathbf{z} \mid \mathbf{x})} p_\theta (\mathbf{x} \mid \mathbf{z} )\right] =
+  \mathbb{E}_{q_\phi ( \mathbf{z} \mid \mathbf{x})} \left[ \frac{p_\theta (\mathbf{x} \mid \mathbf{z} ) p(\mathbf{z})}{q_\phi ( \mathbf{z} \mid \mathbf{x})} )\right]. \tag{3}</script>
+
+<p>From <a href="http://statweb.stanford.edu/~owen/mc/Ch-var-is.pdf">importance sampling literature</a> we know that the optimal proposal is proportional to the nominal pdf times the function, whose expectation we are trying to approximate.
+In our setting, that function is just <script type="math/tex">p_\theta (\mathbf{x} \mid \mathbf{z} )</script>.
+From Bayes’ theorem, <script type="math/tex">p(z \mid x) = \frac{p(x \mid z) p (z)}{p(x)}</script>, we see that the optimal proposal is proportional to the posterior distribution, which is of course intractable.</p>
+
+<h1 id="raise-of-a-variational-autoencoder">Raise of a Variational Autoencoder</h1>
+<p>Fortunately, it turns out, we can kill two birds with one stone:
+by trying to approximate the posterior with a learned proposal, we can efficiently approximate the marginal probability <script type="math/tex">p_\theta(\mathbf{x})</script>.
+A bit by accident, we have just arrived at an autoencoding setup. To learn our model, we need</p>
+
+<ul>
+  <li><script type="math/tex">p_\theta ( \mathbf{x}, \mathbf{z})</script> - the generative model, which consists of
+    <ul>
+      <li><script type="math/tex">p_\theta ( \mathbf{x} \mid \mathbf{z})</script> - a probabilistic decoder, and</li>
+      <li><script type="math/tex">p ( \mathbf{z})</script>                        - a prior over the latent variables,</li>
+    </ul>
+  </li>
+  <li><script type="math/tex">q_\phi ( \mathbf{z} \mid \mathbf{x})</script>   - a probabilistic encoder.</li>
+</ul>
+
+<p>To approximate the posterior, we can use the <a href="https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence">KL-divergence</a> (think of it as a distance between probability distributions) between the proposal and the posterior itself; and we can minimise it.</p>
+
+<script type="math/tex; mode=display">KL \left( q_\phi (\mathbf{z} \mid \mathbf{x}) || p(\mathbf{z} \mid \mathbf{x}) \right) = \mathbb{E}_{q_\phi (\mathbf{z} \mid \mathbf{x})} \left[ \log \frac{q_\phi (\mathbf{z} \mid \mathbf{x})}{p_\theta(\mathbf{z} \mid \mathbf{x})} \right] \tag{4}</script>
+
+<p>Our new problem is, of course, that to evaluate the <em>KL</em> we need to know the posterior distribution.
+Not all is lost, for doing a little algebra can give us an objective function that is possible to compute.</p>
+
+<script type="math/tex; mode=display">KL \left( q_\phi (\mathbf{z} \mid \mathbf{x}) || p(\mathbf{z} \mid \mathbf{x}) \right) =\\
+  \mathbb{E}_{q_\phi (\mathbf{z} \mid \mathbf{x})} \left[ \log q_\phi (\mathbf{z} \mid \mathbf{x}) - \log p_\theta(\mathbf{z} \mid \mathbf{x}) \right] = \\
+  \mathbb{E}_{q_\phi (\mathbf{z} \mid \mathbf{x})} \left[ \log q_\phi (\mathbf{z} \mid \mathbf{x}) - \log p_\theta(\mathbf{z}, \mathbf{x}) \right] - \log p_\theta(\mathbf{x}) =\\
+  \mathcal{L} (\mathbf{x}; \theta, \phi) - \log p_\theta(\mathbf{x})
+  \tag{5}</script>
+
+<p>Where on the second line I expanded the logarithm, on the third line I used the Bayes’ theorem and the fact that <script type="math/tex">p_\theta (\mathbf{x})</script> is independent of <script type="math/tex">\mathbf{z}</script>. <script type="math/tex">\mathcal{L} (\mathbf{x}; \theta, \phi)</script> in the last line is a lower bound on the log probability of data <script type="math/tex">p_\theta (\mathbf{x})</script> - the so-called evidence-lower bound (<em>ELBO</em>). We can rewrite it as</p>
+
+<script type="math/tex; mode=display">\log p_\theta(\mathbf{x}) = \mathcal{L} (\mathbf{x}; \theta, \phi) - KL \left( q_\phi (\mathbf{z} \mid \mathbf{x}) || p_\theta(\mathbf{z} \mid \mathbf{x}) \right), \tag{6}</script>
+
+<script type="math/tex; mode=display">\mathcal{L} (\mathbf{x}; \theta, \phi) = \mathbb{E}_{q_\phi (\mathbf{z} \mid \mathbf{x})}
+    \left[
+      \log \frac{
+        p_\theta (\mathbf{x}, \mathbf{z})
+      }{
+        q_\phi (\mathbf{z} \mid \mathbf{x})
+      }
+    \right]. \tag{7}</script>
+
+<p>We can approximate it using a single sample from the proposal distribution as</p>
+
+<script type="math/tex; mode=display">\mathcal{L} (\mathbf{x}; \theta, \phi) \approx  \log \frac{
+      p_\theta (\mathbf{x}, \mathbf{z})
+    }{
+      q_\phi (\mathbf{z} \mid \mathbf{x})
+    }, \qquad \mathbf{z} \sim q_\phi (\mathbf{z} \mid \mathbf{x}). \tag{8}</script>
+
+<p>We train the model by finding <script type="math/tex">\phi</script> and <script type="math/tex">\theta</script> (usually by stochastic gradient descent) that maximise the <em>ELBO</em>:</p>
+
+<script type="math/tex; mode=display">\phi^\star,~\theta^\star = \arg \max_{\phi \in \Phi,~\theta \in \Theta}
+  \mathcal{L} (\mathbf{x}; \theta, \phi). \tag{9}</script>
+
+<p>By maximising the <em>ELBO</em>, we (1) maximise the marginal probability or (2) minimise the KL-divergence, or both.
+It is worth noting that the approximation of <em>ELBO</em> has the form of the log of importance-sampled expectation of <script type="math/tex">f(\mathbf{x}) = 1</script>, with importance weights <script type="math/tex">w(\mathbf{x}) = \frac{ p_\theta (\mathbf{x}, \mathbf{z}) }{ q_\phi (\mathbf{z} \mid \mathbf{x})}</script>.</p>
+
+<h1 id="what-is-wrong-with-this-estimate">What is wrong with this estimate?</h1>
+<p>If you look long enough at importance sampling, it becomes apparent that the support of the proposal distribution should be wider than that of the nominal pdf - both to avoid infinite variance of the estimator and numerical instabilities.
+In this case, it would be better to optimise the reverse <script type="math/tex">KL(p \mid\mid q)</script>, which has mode-averaging behaviour, as opposed to  <script type="math/tex">KL(q \mid\mid p)</script>, which tries to match the mode of <script type="math/tex">q</script> to one of the modes of <script type="math/tex">p</script>.
+This would typically require taking samples from the true posterior, which is hard.
+Instead, we can use IS estimate of the <em>ELBO</em>, introduced as <a href="https://arxiv.org/abs/1509.00519">Importance Weighted Autoencoder</a> (<em>IWAE</em>). The idea is simple: we take <script type="math/tex">K</script> samples from the proposal and we use an average of probability ratios evaluated at those samples. We call each of the samples a <em>particle</em>.</p>
+
+<script type="math/tex; mode=display">\mathcal{L}_K (\mathbf{x}; \theta, \phi) \approx
+    \log \frac{1}{K} \sum_{k=1}^{K}
+      \frac{
+        p_\theta (\mathbf{x},~\mathbf{z^{(k)}})
+      }{
+        q_\phi (\mathbf{z^{(k)}} \mid \mathbf{x})
+      },
+      \qquad \mathbf{z}^{(k)} \sim q_\phi (\mathbf{z} \mid \mathbf{x}). \tag{10}</script>
+
+<p>This estimator <a href="https://arxiv.org/abs/1705.10306">has been shown</a> to optimise the modified KL-divergence <script type="math/tex">KL(q^{IS} \mid \mid p^{IS})</script>, with <script type="math/tex">q^{IS}</script> and <script type="math/tex">p^{IS}</script> defined as
+<script type="math/tex">q^{IS} = q^{IS}_\phi (\mathbf{z} \mid \mathbf{x}) = \frac{1}{K} \prod_{k=1}^K q_\phi ( \mathbf{z}^{(k)} \mid \mathbf{x} ), \tag{11}</script></p>
+
+<script type="math/tex; mode=display">p^{IS} = p^{IS}_\theta (\mathbf{z} \mid \mathbf{x}) = \frac{1}{K} \sum_{k=1}^K
+  \frac{
+      q^{IS}_\phi (\mathbf{z} \mid \mathbf{x})
+    }{
+      q_\phi (\mathbf{z^{(k)}} \mid \mathbf{x})
+    }
+    p_\theta (\mathbf{z}^{(k)} \mid \mathbf{x}).
+  \tag{12}</script>
+
+<p>While similar to the original distributions, <script type="math/tex">q^{IS}</script> and <script type="math/tex">p^{IS}</script> allow small variations in <script type="math/tex">q</script> and <script type="math/tex">p</script> that we would not have expected.
+Optimising this lower bound leads to better generative models, as shown in the original paper.
+It also leads to higher-entropy (wider, more scattered) estimates of the approximate posterior <script type="math/tex">q</script>, effectively breaking the mode-matching behaviour of the original KL-divergence.
+As a curious consequence, if we increase the number of particles <script type="math/tex">K</script> to infinity, we no longer need the inference model <script type="math/tex">q</script>.</p>
+
+<figure>
+  <img style="display: box; margin: auto" src="http://localhost:4000/resources/iwae_vs_vae.png" alt="IWAE vs VAE" />
+  <figcaption align="center">
+    Posterior distribution of <b>z</b> for the IWAE (top row) and VAE (bottom row). Figure reproduced from the <a href="https://arxiv.org/abs/1509.00519">IWAE paper</a>.
+  </figcaption>
+</figure>
+
+<h1 id="what-is-wrong-with-iwae">What is wrong with IWAE?</h1>
+<p>The importance-weighted <em>ELBO</em>, or the <em>IWAE</em>, generalises the original <em>ELBO</em>: for <script type="math/tex">K=1</script>, we have <script type="math/tex">\mathcal{L}_K = \mathcal{L}_1 = \mathcal{L}</script>.
+It is also true that <script type="math/tex">\log p(\mathbf{x}) \geq \mathcal{L}_{n+1} \geq \mathcal{L}_n \geq \mathcal{L}_1</script>.
+In other words, the more particles we use to estimate <script type="math/tex">\mathcal{L}_K</script>, the closer it gets in value to the true log probability of data - we say that the bound becomes tighter.
+This means that the gradient estimator, derived by differentiating the <em>IWAE</em>, points us in a better direction than the gradient of the original <em>ELBO</em> would.
+Additionally, as we increase <script type="math/tex">K</script>, the variance of that gradient estimator shrinks.</p>
+
+<p>It is great for the generative model, but it turns out to be problematic for the proposal.
+The magnitude of the gradient with respect to proposal parameters goes to zero with increasing <script type="math/tex">K</script>, and it does so much faster than its variance.</p>
+
+<p>Let <script type="math/tex">\Delta (\phi)</script> be a minibatch estimate of the gradient of an objective function we’re optimising (<em>e.g.</em> <em>ELBO</em>) with respect to <script type="math/tex">\phi</script>. If we define signal-to-noise ratio (SNR) of the parameter update as</p>
+
+<script type="math/tex; mode=display">SNR(\phi) = \frac{
+      \left| \mathbb{E} \left[ \Delta (\psi ) \right] \right|
+    }{
+      \mathbb{V} \left[ \Delta (\psi ) \right]^{\frac{1}{2}}
+      }, \tag{13}</script>
+
+<p>where <script type="math/tex">\mathbb{E}</script> and <script type="math/tex">\mathbb{V}</script> are expectation and variance, respectively, it turns out that SNR increases with <script type="math/tex">K</script> for <script type="math/tex">p_\theta</script>, but it decreases for <script type="math/tex">q_\phi</script>.
+The conclusion here is simple: the more particles we use, the worse the inference model becomes.
+If we care about representation learning, we have a problem.</p>
+
+<h1 id="better-estimators">Better estimators</h1>
+<p>We can do better than the IWAE, as we’ve shown in <a href="https://arxiv.org/abs/1802.04537">our recent paper</a>.
+The idea is to use separate objectives for the inference and the generative models.
+By doing so, we can ensure that both get non-zero low-variance gradients, which lead to better models.</p>
+
+<figure>
+  <img style="display: box; margin: auto" src="http://localhost:4000/resources/snr_encoder.png" alt="Signal-to-Noise ratio for the encoder across training epochs" />
+  <figcaption align="center">Signal-to-Noise ratio for the proposal across training epochs for different training objectives.</figcaption>
+</figure>
+
+<p>In the above plot, we compare <em>SNR</em> of the updates of parameters <script type="math/tex">\phi</script> of the proposal <script type="math/tex">q_\phi</script> acorss training epochs. <em>VAE</em>, which shows the highest <em>SNR</em>, is trained by optimising <script type="math/tex">\mathcal{L}_1</script>. <em>IWAE</em>, trained with <script type="math/tex">\mathcal{L}_{64}</script>, has the lowest <em>SNR</em>. The three curves in between use different combinations of <script type="math/tex">\mathcal{L}_{64}</script> for the generative model and <script type="math/tex">\mathcal{L}_8</script> or <script type="math/tex">\mathcal{L}_1</script> for the inference model. While not as good as the <em>VAE</em> under this metric, they all lead to training better proposals and generative models than either <em>VAE</em> or <em>IWAE</em>.</p>
+
+<p>As a, perhaps surprising, side effect, models trained with our new estimators achieve higher <script type="math/tex">\mathcal{L}_{64}</script> bounds than the IWAE itself trained with this objective.
+Why?
+By looking at the <a href="https://en.wikipedia.org/wiki/Effective_sample_size">effective sample-size (ESS)</a> and the marginal log probability of data, it looks like optimising <script type="math/tex">\mathcal{L}_1</script> leads to producing the best quality proposals, but the worst generative models.
+If we combine a good proposal with an objective that leads to good generative models, we should be able to provide lower-variance estimate of this objective and thus learn even better models.
+Please see <a href="https://arxiv.org/abs/1802.04537">our paper</a> for details.</p>
+
+<h1 id="further-reading">Further Reading</h1>
+<ul>
+  <li>More flexible proposals: Normalizing Flows tutorial by Eric Jang <a href="https://blog.evjang.com/2018/01/nf1.html">part 1</a> and <a href="https://blog.evjang.com/2018/01/nf2.html">part 2</a></li>
+  <li>More flexible likelihood function: A post on <a href="http://sergeiturukin.com/2017/02/22/pixelcnn.html">Pixel CNN by Sergei Turukin</a></li>
+  <li>Extension of IWAE to sequences: <a href="https://arxiv.org/abs/1705.09279">Chris Maddison <em>et. al.</em>, “FIVO”</a> and <a href="https://arxiv.org/abs/1705.10306">Tuan Anh Le <em>et. al.</em>, “AESMC”</a></li>
+</ul>
+
+<!-- #### Acknowledgements
+I would like to thank [Tom Rainforth](http://www.robots.ox.ac.uk/~twgr/) for including me in this project as well as [Neil Dhir](http://www.robots.ox.ac.uk/~neild/) and [Anton Troynikov](http://troynikov.io/) for proofreading this post. -->
+
+
+  </div>
+  
+  <div style="padding: 20px;"></div>
+  
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <!-- <h2 class="footer-heading">Research Notes</h2> -->
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            Research Notes
+          </li>
+
+          <li>
+            <a href="mailto:"></a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>concise research summary drafts(always updating when necessary) and random thoughts
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

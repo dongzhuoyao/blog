@@ -1,0 +1,7 @@
+I"Î<h1 id="latent-variable-models">Latent Variable Models</h1>
+<p>Suppose you would like to model the world in terms of the probability distribution over its possible states <script type="math/tex">p(\mathbf{x})</script> with <script type="math/tex">\mathbf{x} \in \mathcal{R}^D</script>.
+The world may be complicated and we do not know what form <script type="math/tex">p(\mathbf{x})</script> should have.
+To account for it, we introduce another variable <script type="math/tex">\mathbf{z} \in \mathcal{R}^d</script>, which describes, or explains the content of <script type="math/tex">\mathbf{x}</script>.
+If <script type="math/tex">\mathbf{x}</script> is an image, <script type="math/tex">\mathbf{z}</script> can contain information about the number, type and appearance of objects visible in the scene as well as the background and lighting conditions.
+This new variable allows us to express <script type="math/tex">p(\mathbf{x})</script> as an infinite mixture model,</p>
+:ET

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+  <!-- <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+  <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Normalizing Flows generalize Inverse Transform Sampling (sort of)</title>
+  <meta name="description" content="Normalizing flows allow specifying a series of transformations (hence a flow) to transform a random variable (RV) from a simple probability distribution into...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/notes/2019-01-30-inv-cdf/">
+  <link rel="alternate" type="application/rss+xml" title="Research Notes" href="http://localhost:4000/feed.xml">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/css/blogposts.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:4000/resources/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:4000/resources/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:4000/resources/favicon/favicon-16x16.png">
+<link rel="manifest" href="http://localhost:4000/resources/favicon/site.webmanifest">
+<link rel="mask-icon" href="http://localhost:4000/resources/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+<!--https://realfavicongenerator.net/favicon_result?file_id=p1e445a6m31cgavri1pnl1i0nojp6#.Xnjq_5NKhhE
+-->
+</head>
+
+
+  <body>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111274068-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-111274068-3');
+</script>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Research Notes</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Normalizing Flows generalize Inverse Transform Sampling (sort of)</h1>
+    <p class="post-meta"><time datetime="2019-01-30T17:23:00+01:00" itemprop="datePublished">Jan 30, 2019</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Normalizing flows allow specifying a series of transformations (hence a flow) to transform a random variable (RV) from a simple probability distribution into one from a potentially very complicated distribution.
+The mappings <script type="math/tex">f</script> used as a part of the flow have to be invertible, at least in principle. Additionally, the Jacobian of every transformation has to be cheap to compute if the flow is to be of any practical value.
+See <a href="http://akosiorek.github.io/ml/2018/04/03/norm_flows.html">my previous post</a> for an overview of flows.</p>
+
+<p>Even though flows are useful for constructing complicated distributions, evaluating the corresponding <a href="https://en.wikipedia.org/wiki/Cumulative_distribution_function">cumulative distribution function (CDF)</a> remains intractable — even if it is tractable for the base distribution.
+This can be an issue if we are interested in <a href="https://en.wikipedia.org/wiki/Quantile_regression">median (or other quantile) solutions</a>, if we need to <a href="https://en.wikipedia.org/wiki/Truncated_distribution">truncate the resulting distribution</a> or to perform <a href="https://en.wikipedia.org/wiki/Statistical_hypothesis_testing">hypothesis testing</a> such as computing a <a href="https://en.wikipedia.org/wiki/P-value">p-value</a>.</p>
+
+<p>To see this, let <script type="math/tex">x \sim p_x(x)</script> such that <script type="math/tex">x \in \mathbb{R}</script> with <script type="math/tex">P_x(x) = p_x(X \leq x) = \int_{-\infty}^x p_x(\tau) d \tau</script> the CDF.
+Transforming <script type="math/tex">x</script> with a norm flow <script type="math/tex">f</script> yields <script type="math/tex">y = f(x)</script>, and</p>
+
+<script type="math/tex; mode=display">p_y(y) = p(x)\left( \frac{df(x)}{dx} \right)^{-1}\tag{1}.</script>
+
+<p>To compute <script type="math/tex">P_y(y)</script>, the CDF of y, one needs to evaluate</p>
+
+<script type="math/tex; mode=display">p_y(Y \leq y) = \int_{-\infty}^y p_y(\tau) d \tau = \int_{-\infty}^{f^{-1}(y)} p_x(\tau) \left( \frac{df(\tau)}{d\tau} \right)^{-1} d \tau.</script>
+
+<p>This involves integrating the derivative of <script type="math/tex">f</script>, which is intractable in case <script type="math/tex">f</script> is complicated and non-linear, as is the case if <script type="math/tex">f</script> is parametrized by a neural network.</p>
+
+<p>In what follows, we will delve into the fact that normalizing flow is a generalization of <a href="https://en.wikipedia.org/wiki/Inverse_transform_sampling">inverse transform sampling</a>.
+Firstly, we will develop proofs for univariate and multivariate cases.
+The proofs are constructive and provide a way of constructing a family of parametric CDFs by minimally modifying existing normalizing flow architectures.
+Secondly, we will go through three recent papers that propose related ideas.
+Finally, we will try to develop a more general invertible neural networks which addresses some of the shortcomings of discussed papers.
+Enjoy!</p>
+
+<h3 id="what-does-make-a-cdf">What does make a CDF?</h3>
+<p>Let <script type="math/tex">X \in \mathbb{X} \subset \mathbb{R}</script> be a random variable.
+The <a href="https://en.wikipedia.org/wiki/Cumulative_distribution_function">CDF is defined</a> as the probability that <script type="math/tex">X</script> will take a value smaller or equal than some other value <script type="math/tex">x \in \mathbb{X}</script>.
+Here, we are interested in what properties should a function <script type="math/tex">F: \mathbb{X} \mapsto [0, 1]</script> have to be considered a CDF.
+<script type="math/tex">F</script> is a CDF if:</p>
+<ol>
+  <li><script type="math/tex">F</script> is non-decreasing,</li>
+  <li><script type="math/tex">F</script> is right-continuous,</li>
+  <li><script type="math/tex">\lim_{x \to -\infty} F(x) = 0</script> and <script type="math/tex">\lim_{x \to \infty} F(x) = 1</script>.</li>
+</ol>
+
+<p>It might be interesting that a derivative of such a function always results in a valid probability density function <script type="math/tex">f(x) = \frac{dF(x)}{dx}</script>, <script type="math/tex">f: \mathbb{R} \mapsto \mathbb{R}_+</script> and <script type="math/tex">f</script> integrates to one.
+Normalizing flows are strictly monotonic by construction, which satisfies property 1. while also being stronger.
+Property 2. is satisfied as long as parameter values are bounded and typically simple regularization like L2 is sufficient to guarantee this.
+Property 3. follows from monotonicity and the fact that flows are defined on the space of real numbers <script type="math/tex">\mathbb{R}</script>.
+Specifically, a monotonic function has to reach its lower limit when evaluated at negative infinity and its upper limit when evaluated at positive infinity.
+However, since normalizing flows typically map to <script type="math/tex">\mathbb{R}</script> and not <script type="math/tex">[0, 1]</script>, they are not CDFs per se.</p>
+
+<h3 id="normalazing-flows-and-inverse-transform-sampling">Normalazing Flows and Inverse Transform Sampling</h3>
+<p>If we know a CDF <script type="math/tex">P_y(y)</script> and we can invert it analytically, we can sample from the corresponding distribution by first sampling a random number uniformly from a unit interval <script type="math/tex">u \sim \operatorname{U}([0, 1]) = p_u(u)</script> and transforming it as <script type="math/tex">y = P_y^{-1}(u)</script>.
+We can use <a href="https://en.wikipedia.org/wiki/Probability_density_function#Dependent_variables_and_change_of_variables">the change of variables rule</a> to show that the pdf of this new variable is in fact equal to <script type="math/tex">p_y(y)</script>. Specifically, let <script type="math/tex">q_y(y)</script> be the new density, then</p>
+
+<script type="math/tex; mode=display">q_y(y) = p_u(u) \left( \frac{P_y^{-1}(u)}{du} \right)^{-1} = \left( \frac{P_y^{-1}(u)}{du} \right)^{-1} = \frac{P_y(y)}{dy} = p_y(y) \tag{2},</script>
+
+<p>since <script type="math/tex">\forall_u: p_u(u) = 1</script> and, due to the <a href="https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant#Inverse">inverse function theorem</a>, for any invertible function the derivative of its inverse is equal to the reciprocal of the derivative of the original function.
+This is remarkably similar to equation (1), with the difference that in equation (2) the base density is always uniform and supported on <script type="math/tex">[0, 1]</script>.
+We see that the inverse CDF in (2) takes the role of the normalizing flow <script type="math/tex">f</script> in (1).
+What follows is that a normalizing flow whose input domain is constrained to be the unit interval is, in fact, the inverse CDF of some distribution.
+Additionally, a composition of an inverse CDF with a normalizing flow is a valid inverse CDF.</p>
+
+<p>The above holds only for one-dimensional random variables.
+Inverse transform sampling does not work in the multivariate regime, and so we need to derive this case separately.</p>
+
+<h3 id="multivariate-case">Multivariate case</h3>
+<p>A multivariate CDF is a non-invertible function <script type="math/tex">P_{\mathbf{x}}: \mathbb{R}^d \mapsto [0, 1]</script> is defined as</p>
+
+<script type="math/tex; mode=display">P_{\mathbf{x}}\left(\mathbf{x}\right) = P_{\mathbf{x}} \left( X_1 \leq x_1, \dots, X_d \leq x_d \right).</script>
+
+<p>How does this relate to normalizing flows?
+We will focus on a two-dimensional random variable and autoregressive flows such as the <a href="https://arxiv.org/pdf/1606.04934">Inverse Autoregressive Flow (IAF)</a> and <a href="https://arxiv.org/abs/1804.00779">Neural Autoregressive Flow (NAF)</a>, but it is easy to generalize this analysis to a general multivariate case.</p>
+
+<p>Let <script type="math/tex">x, y \in \mathbb{R}</script> and <script type="math/tex">P_{xy}: \mathbb{R}^2 \mapsto [0, 1]</script>.
+The joint density reads as <script type="math/tex">p_{xy}(x, y) = \frac{d^2 P_{xy}(x, y)}{dxdy}</script>.
+Interestingly, a conditional CDF is equal to</p>
+
+<script type="math/tex; mode=display">P_{xy}(x \mid Y = y) = \int_{-\infty}^x p_{xy}(\tau \mid y) d \tau = \int_{-\infty}^x \frac{p_{xy}(\tau, y)}{p_y(y)} d \tau = \frac{\frac{d P_{xy}(x, y)}{dy}}{p_y(y)}. \tag{3}</script>
+
+<p>However, this is not appropriate for an autoregressive decomposition of CDFs of the following form</p>
+
+<script type="math/tex; mode=display">P_{xy}(x, y) = p_{xy}(X \leq x, Y \leq y) = P_{xy}(x \mid y)P_{y}(y). \tag{4}</script>
+
+<p>It follows that CDFs do decompose autoregressively, but only with inequalities in the conditioning set.
+If we look at autoregressive flows, however, we see that transformations are conditioned on particular values of preceding variables, which corresponds to an inverse CDF conditioned on a particular values, similarly to equation (3).
+We conclude that a flow transformation of a multivariate random variable cannot be interpreted as the inverse of a multivariate CDF.</p>
+
+<p>If we use an invertible neural network, we can learn a free-form invertible CDF that admits density evaluation as well as sampling.
+It seems to be not the case for multivariate settings.
+Can we learn multivariate CDFs in any any other way?
+It turns out that we can, and here’s how.</p>
+
+<h3 id="learning-cdfs-directly-wip">Learning CDFs directly (WIP)</h3>
+<p>In a recent paper <a href="https://arxiv.org/abs/1811.00974">“Neural Likelihoods via Cumulative Distribution Functions”</a> Chilinski &amp; Silva learn CDFs directly.
+Why?</p>
+
+<h3 id="learning-inverse-cdfs-directly-wip">Learning Inverse CDFs directly (WIP)</h3>
+<p>It is also possible to directly learn the inverse CDF as described in <a href="https://arxiv.org/abs/1806.05575">
+Autoregressive Quantile Networks for Generative Modeling</a> by Ostrovski, Dabney and Munos.</p>
+
+<h3 id="when-and-why-you-should-use-a-cdf-based-methods-instead-of-a-normalizing-flow-wip">When and why you should use a CDF-based methods instead of a normalizing flow (WIP)</h3>
+<ol>
+  <li>when you need to evaluate the CDF</li>
+  <li>otherwise just use a flow?</li>
+</ol>
+
+<h4 id="acknowledgements">Acknowledgements</h4>
+<p>I would like to thank Adam Goliński, Anthony Caterini Juho Lee for fruitful discussions as well as his detailed feedback and numerous remarks on how to improve this post.</p>
+
+<!-- ### A
+
+For some flows, like [Real-NVP](https://arxiv.org/abs/1605.08803) and [Inverse Autoregressive Flow](https://arxiv.org/pdf/1606.04934), the flow can be inverted analytically and we can retrieve the CDF.
+For others, like [Radial Flow](https://arxiv.org/abs/1505.05770) or [Neural Autoregressive Flow (NAF)](https://arxiv.org/abs/1804.00779), the inverse is non-analytic.
+However, it is possible to construct a class of analytically-invertible NAFs.
+
+### Neural Autoregressive Flows (NAF)
+NAF are very related to the Inverse Autoregressive Flow, where the only difference is the kind of used transformation.
+Let $$\mathbf{z}^i \in \mathbb{R}^d$$, $$i=0, \dots, k$$, where $$\mathbf{z}^0 \sim p_0(\mathbf{z})$$ and $$z^i_j = f_i(z^{i-1}_{1:j})$$.
+The transformation $$f_i$$ can be performed in parallel for all dimensions of $$\mathbf{z}^i$$ and can be efficiently parametrized by a masked neural net such as [MADE](https://arxiv.org/abs/1502.03509).
+The difference is that IAF is restricted to affine transformations of the following form
+
+$$
+  f_i(z^{i-1}_{1:j}) = \frac{z^{i-1}_j + \operatorname{\mu} \left( z^{i-1}_{1:j-1} \right)}{\operatorname{\sigma} \left( z^{i-1}_{1:j-1} \right)},
+$$
+
+while NAF allows $$f_i$$ to be a parametric strictly monotonic function $$g: \mathbb{R} \mapsto \mathbb{R}$$, whose parameters are a function of $$z^{i-1}_{1:j-1}$$.
+That is,
+
+$$
+  f_i(z^{i-1}_{1:j}) = \operatorname{g} \left( z^{i-1}_j; \operatorname{\theta} (z^{i-1}_{1:j-1}) \right).
+$$
+
+The Jacobian of both transformation is triangular, so its determinant is equal to the product of diagonal entries.
+For IAF, we have $$\sigma^{-1}$$ on the diagonal, while for NAF it is the element-wise derivative of $$g$$.
+This means that NAFs are more computationally expensive, but also more expressive, see [figure 1](#iaf_vs_naf).
+
+<figure>
+  <a name="iaf_vs_naf"></a>
+  <img style="display: box; margin: auto" src="http://localhost:4000/resources/naf.png" alt="IAF vs NAF"/>
+  <figcaption align='center'>
+    <b>Fig 1.</b> The effect of IAF (top) and NAF (bottom). Left column shows the input density x. Right column shows the output density y, and the middle column shows the function f. IAF has constant gradient and only scales the base distribution. NAF's gradient depends on the input and it can dramatically reshape the input density: when the gradient of f is smaller than one, the corresponding area is contracted, and when it is greater than one, the corresponding area is expanded. Inflection points in f can induce additional modes in the resulting density. The figure comes from the <a href="https://arxiv.org/abs/1804.00779">NAF paper</a>.
+  </figcaption>
+</figure>
+
+Function $$f$$ takes the role of an inverse CDF in both IAF and NAF.
+NAF has the disadvantage that the functions used in the paper are not invertible analytically and hence NAF cannot be used for density estimation.
+Generally, however, constructing an invertible neural network is possible.
+While not practically useful for density estimation in autoregressive models such as IAF or NAF (it cannot be parallelized and is therefore prohibitively expensive) it could be still useful for learning general distributions.
+
+### Fully-invertible Neural Networks
+While Real-NVP and IAF both define invertible neural networks, they are insufficient for our purposes due to their simplicity.
+Recent [invertible RevNet paper](https://arxiv.org/abs/1802.07088) proposes a RealNVP-like neural net for general-purpose deep learning, but it suffers from the same issue.
+[FFJORD](http://www.cs.toronto.edu/~duvenaud/), a continuous flow, could be used for this purpose, but it is terribly inefficient (it took 5 days with 6 GPUs for density estimation on MNIST).
+I haven't seen any recent papers on general-purpose invertible neural networks, and the only paper I found is "[One-Step Neural Network Inversion with PDF
+Learning and Emulation](http://leemon.com/papers/2005bsi.pdf)" from 2005 IEEE neural net conference.
+
+Why are there no more papers about the subject?
+The 2005 paper proposes a straightforward method of building invertible MLPs, and I will describe it shortly.
+It should be straightforward to construct an invertible CNN given the same concept and ideas from iRevNet, plus some ideas from numerical linear algebra.
+Here we go.
+
+#### Invertible MLP
+For a neural net to be invertible, it needs to have the same number of inputs and outputs, and the number of units anywhere in the network cannot exceed the number of outputs.
+If these constraints are met, we can easily construct an invertible MLP as a sequence of square matrix multiplications and invertible element-wise non-linearities.
+In this case, inverse is computing by inverting the non-linearities and multiplying by inverse weight-matrices, layer by layer, starting from the end.
+There are two issues:
+1. Inverting a matrix is an $$O(d^3)$$ operation, where $$d$$ is the dimensionality.
+2. Inverse is defined only for full-rank matrices, and it is possible that some of the weight matrices might become singular during training.
+
+Issue 1. can be circumvented by solving the problem approximately instead of exactly and by clever parametrisation of weight matrices.
+Firstly, we don't have to explicitly invert weight matrices.
+What we need is the solution of a linear equation $$W\mathbf{x} = \mathbf{y}$$.
+An approximate solution can often be much more efficient to compute than the exact solution, and it doesn't matter if the solution is exact or not if the approximation error is close to machine precision.
+Moreover, any matrix can be decomposed into a pair of lower- and upper-triangular matrices by e.g. [LU decomposition](https://en.wikipedia.org/wiki/LU_decomposition).
+Consequently, we can obtain any matrix by a product of two triangular matrices, and it turns out that triangular linear systems are much cheaper to solve.
+[Traditional algorithms](https://en.wikipedia.org/wiki/Triangular_matrix#Forward_and_back_substitution) are sequential, but [parallel alternatives](https://arxiv.org/abs/1710.04985) also exist.
+
+Issue 2. can be tackled by appropriate [regularization](https://en.wikipedia.org/wiki/Tikhonov_regularization) (damping) and [preconditioning](https://en.wikipedia.org/wiki/Preconditioner).
+In practice, sufficient weight-decay applied to diagonal entries of weight matrices should be enough to prevent rank deficiency.
+
+#### Invertible CNNs
+With CNNs he situation is a bit more tricky.
+While it is easy to see that a convolution corresponds to matrix multiplication with a [Toeplitz matrix](https://en.wikipedia.org/wiki/Toeplitz_matrix), it is impractical to instantiate such a matrix due to its huge dimensions compared to number of units in a conv filter.
+Fortunately, a Toeplitz matrix can be padded with zeros to create a [Circulant matrix](https://en.wikipedia.org/wiki/Circulant_matrix), and the latter has an interesting property.
+Namely, linear systems features a circulant matrix can be solved with Fourier transform.
+This means that we can solve our linear system in $$\operatorname{O}(n\log{n})$$, where $$n$$ is the number of units.
+
+## How to parametrize an invertible Neural Network?
+Interestingly, Huang et. al. arrived at very similar conclusions in [Neural Autoregressive Flows](https://arxiv.org/abs/1804.00779) when they say that the neural net used for transformation takes the role of the CDF (cf. Fig...) -->
+
+
+  </div>
+  
+  <div style="padding: 20px;"></div>
+  
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <!-- <h2 class="footer-heading">Research Notes</h2> -->
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            Research Notes
+          </li>
+
+          <li>
+            <a href="mailto:"></a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>concise research summary drafts(always updating when necessary) and random thoughts
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

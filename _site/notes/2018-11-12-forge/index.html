@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+  <!-- <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+  <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Forge, or how do you manage your machine learning experiments?</title>
+  <meta name="description" content="Every time I begin a machine learning (ML) project, I go through more or less the same steps.I start by quickly hacking a model prototype and a training scri...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/notes/2018-11-12-forge/">
+  <link rel="alternate" type="application/rss+xml" title="Research Notes" href="http://localhost:4000/feed.xml">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/css/blogposts.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:4000/resources/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:4000/resources/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:4000/resources/favicon/favicon-16x16.png">
+<link rel="manifest" href="http://localhost:4000/resources/favicon/site.webmanifest">
+<link rel="mask-icon" href="http://localhost:4000/resources/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+<!--https://realfavicongenerator.net/favicon_result?file_id=p1e445a6m31cgavri1pnl1i0nojp6#.Xnjq_5NKhhE
+-->
+</head>
+
+
+  <body>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111274068-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-111274068-3');
+</script>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Research Notes</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Forge, or how do you manage your machine learning experiments?</h1>
+    <p class="post-meta"><time datetime="2018-10-11T12:15:00+02:00" itemprop="datePublished">Oct 11, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Every time I begin a machine learning (ML) project, I go through more or less the same steps.
+I start by quickly hacking a model prototype and a training script.
+After a few days, the codebase grows unruly and any modification is starting to take unreasonably long time due to badly-handled dependencies and the general lack of structure.
+At this point, I decide that some refactoring is needed:
+parts of the model are wrapped into separate, meaningful objects, and the training script gets somewhat general structure, with clearly delineated sections.
+Further down the line, I am often faced with the need of supporting multiple datasets and a variety of models, where the differences between model variants are much more than just hyperparameters - they often differ structurally and have different inputs or outputs.
+At this point, I start copying training scripts to support model variants.
+It is straightforward to set up, but maintenance becomes a nightmare: with copies of the code living in separate files, any modification has to be applied to all the files.</p>
+
+<p>For me, it is often unclear how to handle this last bit cleanly.
+It can be project-dependent.
+It is often easy to come up with simple hacks, but they do not generalise and can make code very messy very quickly.
+Given that most experiments look similar among the projects I have worked on, there should exist a general solution.
+Let’s have a look at the structure of a typical experiment:</p>
+<ol>
+  <li>You specify the data and corresponding hyperparameters.</li>
+  <li>You define the model and its hyperparameters.</li>
+  <li>You run the training script and (hopefully) save model checkpoints and logs during training.</li>
+  <li>Once the training has converged, you might want to load a model checkpoint in another script or a notebook for thorough evaluation or deploy the model.</li>
+</ol>
+
+<p>In most projects I have seen, 1. and 2. were split between the training script (dataset and model classes or functions) and external configs (hyperparameters as command-line arguments or config files).
+Logging and saving checkpoints <strong>should</strong> be a part of every training script, and yet it can be time-consuming to set up correctly.
+As far as I know, there is no general mechanism to do 4., and it is typically handled by retrieving hyperparameters used in a specific experiment and using the dataset/model classes/functions directly to instantiate them in a script or a notebook.</p>
+
+<p>If this indeed is a general structure of an experiment, then there should exist tools to facilitate it.
+I am not familiar with any, however. Please let me know if such tools exist, or if the structure outlined above does not generally hold.
+<a href="https://github.com/IDSIA/sacred">Sacred</a> and <a href="https://github.com/QUVA-Lab/artemis">artemis</a> are great for managing configuration files and experimental results; you can retrieve configuration of an experiment, but if you want to load a saved model in a notebook, for example, you need to know how to instantiate the model using the config. I prefer to automate this, too.
+When it comes to <a href="https://www.tensorflow.org/">tensorflow</a>, there is <a href="https://keras.io/">keras</a> and the <a href="https://www.tensorflow.org/guide/estimators">estimator api</a> that simplify model building, fitting and evaluation.
+While generally useful, they are rather heavy and make access to low-level model features difficult.
+Their lack of flexibility is a no-go for me since I often work on non-standard models and require access to the most private of their parts.</p>
+
+<p>All this suggests that we could benefit from a lightweight experimental framework for managing ML experiments.
+For me, it would be ideal if it satisfied the following requirements.</p>
+<ol>
+  <li>It should require minimal setup.</li>
+  <li>It has to be compatible with tensorflow (my primary tool for ML these days).</li>
+  <li>Ideally, it should be usable with non-tensorflow models - software evolves quickly, and my next project might be in <a href="https://pytorch.org/">pytorch</a>. Who knows?</li>
+  <li>Datasets and models should be specified and configured separately so that they can be mixed and matched later on.</li>
+  <li>Hyerparameters and config files should be stored for every experiment, and it would be great if we could browse them quickly, without using non-standard apps to do so (so no databases).</li>
+  <li>Loading a trained model should be possible with minimum overhead, ideally without touching the original model-building code. Pointing at a specific experiment should be enough.</li>
+</ol>
+
+<p>As far as I know, such a framework does not exist.
+So how do I go about it?
+Since I started my master thesis at <a href="http://brml.org/brml/index.html">BRML</a>, I have been developing tools, including parts of an experimental framework, that meet some of the above requirements.
+However, for every new project I started, I would copy parts of the code responsible for running experiments from the previous project.
+After doing that for five different projects (from <a href="https://github.com/akosiorek/hart">HART</a> to <a href="https://github.com/akosiorek/sqair">SQAIR</a>), I’ve had enough.
+When I was about to start a new project last week, I’ve taken all the experiment-running code, made it project-agnostic, and put it into a separate repo, wrote some docs, and gave it a name. Lo and behold: <a href="https://github.com/akosiorek/forge">Forge</a>.</p>
+
+<h1 id="forge">Forge</h1>
+<p>While it is very much work in progress, I would like to show you how to set up your project using <code class="highlighter-rouge">forge</code>.
+Who knows, maybe it can simplify your workflow, too?</p>
+
+<h3 id="configs">Configs</h3>
+
+<p>Configs are perhaps the most useful component in <code class="highlighter-rouge">forge</code>.
+The idea is that we can specify an arbitrarily complicated config file as a python function, and then we can load it using <code class="highlighter-rouge">forge.load(config_file, *args, **kwargs)</code>, where <code class="highlighter-rouge">config_file</code> is a path on your filesystem.
+The convention is that the config file should define <code class="highlighter-rouge">load</code> function with the following signature: <code class="highlighter-rouge">load(config, *args, **kwargs)</code>.
+The arguments and kw-args passed to <code class="highlighter-rouge">forge.load</code> are automatically forwarded to the <code class="highlighter-rouge">load</code> function in the config file.
+Why would you load a config by giving its file path? To make code maintenance easier!
+Once you write config-loading code in your training/experimentation scripts, it is best not to touch it anymore.
+But how do you swap config files?
+<strong>Without</strong> touching the training script:
+If we specify file paths as command-line arguments, then we can do it easily.
+Here’s an example.
+Suppose that our data config file <code class="highlighter-rouge">data_config.py</code> is the following:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">tensorflow.examples.tutorials.mnist</span> <span class="kn">import</span> <span class="n">input_data</span>
+
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+
+  <span class="c1"># The `config` argument is here unused, but you can treat it
+</span>  <span class="c1"># as a dict of keys and values accessible as attributes - it acts
+</span>  <span class="c1"># like an AttrDict
+</span>
+  <span class="n">dataset</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">read_data_sets</span><span class="p">(</span><span class="s">'.'</span><span class="p">)</span>  <span class="c1"># download MNIST
+</span>  <span class="c1"># to the current working dir and load it
+</span>  <span class="k">return</span> <span class="n">dataset</span>
+</code></pre></div></div>
+
+<p>Our model file defines a simple one-layer fully-connected neural net, classification loss and some metrics in <code class="highlighter-rouge">model_config.py</code>. It can read as follows.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">sonnet</span> <span class="k">as</span> <span class="n">snt</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+
+<span class="kn">from</span> <span class="nn">forge</span> <span class="kn">import</span> <span class="n">flags</span>
+
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">'n_hidden'</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="s">'Number of hidden units.'</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">process_dataset</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">pass</span>
+  <span class="c1"># this function should return a minibatch, somehow
+</span>
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+
+    <span class="n">imgs</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">process_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+    <span class="n">imgs</span> <span class="o">=</span> <span class="n">snt</span><span class="o">.</span><span class="n">BatchFlatten</span><span class="p">()(</span><span class="n">imgs</span><span class="p">)</span>
+    <span class="n">mlp</span> <span class="o">=</span> <span class="n">snt</span><span class="o">.</span><span class="n">nets</span><span class="o">.</span><span class="n">MLP</span><span class="p">([</span><span class="n">config</span><span class="o">.</span><span class="n">n_hidden</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">mlp</span><span class="p">(</span><span class="n">imgs</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="c1"># softmax cross-entropy
+</span>    <span class="n">loss</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">sparse_softmax_cross_entropy_with_logits</span><span class="p">(</span><span class="n">logits</span><span class="o">=</span><span class="n">logits</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">))</span>
+
+    <span class="c1"># predicted class and accuracy
+</span>    <span class="n">pred_class</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">to_float</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">to_int32</span><span class="p">(</span><span class="n">pred_class</span><span class="p">),</span> <span class="n">labels</span><span class="p">)))</span>
+
+    <span class="c1"># put here everything that you might want to use later
+</span>    <span class="c1"># for example when you load the model in a jupyter notebook
+</span>    <span class="n">artefacts</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">'mlp'</span><span class="p">:</span> <span class="n">mlp</span><span class="p">,</span>
+        <span class="s">'logits'</span><span class="p">:</span> <span class="n">logits</span><span class="p">,</span>
+        <span class="s">'loss'</span><span class="p">:</span> <span class="n">loss</span><span class="p">,</span>
+        <span class="s">'pred_class'</span><span class="p">:</span> <span class="n">pred_class</span><span class="p">,</span>
+        <span class="s">'accuracy'</span><span class="p">:</span> <span class="n">acc</span>
+    <span class="p">}</span>
+
+    <span class="c1"># put here everything that you'd like to be reported every N training iterations
+</span>    <span class="c1"># as tensorboard logs AND on the command line
+</span>    <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span><span class="s">'crossentropy'</span><span class="p">:</span> <span class="n">loss</span><span class="p">,</span> <span class="s">'accuracy'</span><span class="p">:</span> <span class="n">acc</span><span class="p">}</span>
+
+    <span class="c1"># loss will be minimised with respect to the model parameters
+</span>    <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">artefacts</span>
+</code></pre></div></div>
+
+<p>Now we can write a simple script called <code class="highlighter-rouge">experiment.py</code> that loads some data and model config files and does useful things with them.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">path</span> <span class="k">as</span> <span class="n">osp</span>
+
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+
+<span class="kn">import</span> <span class="nn">forge</span>
+<span class="kn">from</span> <span class="nn">forge</span> <span class="kn">import</span> <span class="n">flags</span>
+
+
+<span class="c1"># job config
+</span><span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">'data_config'</span><span class="p">,</span> <span class="s">'data_config.py'</span><span class="p">,</span> <span class="s">'Path to a data config file.'</span><span class="p">)</span>
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">'model_config'</span><span class="p">,</span> <span class="s">'model_config.py'</span><span class="p">,</span> <span class="s">'Path to a model config file.'</span><span class="p">)</span>
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_integer</span><span class="p">(</span><span class="s">'batch_size'</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="s">'Minibatch size used for training.'</span><span class="p">)</span>
+
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">forge</span><span class="o">.</span><span class="n">config</span><span class="p">()</span>  <span class="c1"># parse command-line flags
+</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">forge</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">data_config</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+<span class="n">loss</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">stuff</span> <span class="o">=</span> <span class="n">forge</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">model_config</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># ...
+# do useful stuff
+</span></code></pre></div></div>
+
+<p>Here’s the best part.
+You can just run <code class="highlighter-rouge">python experiment.py</code> to run the script with the config files given above.
+But if you would like to run a different config, you can execute <code class="highlighter-rouge">python experiment.py --data_config some/config/file/path.py</code> without touching experimental code.
+All this is very lightweight, as config files can return anything and take any arguments you find necessary.</p>
+
+<h3 id="smart-checkpoints">Smart checkpoints</h3>
+<p>Given that we have very general and flexible config files, it should be possible to abstract away model loading.
+It would be great, for instance, if we could load a trained model snapshot <strong>without</strong> pointing to the config files (or model-building code, generally speaking) used to train the model.
+We can do it by storing config files with model snapshots.
+It can significantly simplify model evaluation and deployment and increase reproducibility of our experiments.
+How do we do it?
+This feature requires a bit more setup than just using config files, but bear with me - it might be even more useful.</p>
+
+<p>The smart checkpoint framework depends on the following folder structure.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">results_dir</span>
+  <span class="o">|</span><span class="n">run_name</span>
+    <span class="o">|</span><span class="mi">1</span>
+    <span class="o">|</span><span class="mi">2</span>
+    <span class="o">|...</span>
+    <span class="o">|&lt;</span><span class="n">integer</span><span class="o">&gt;</span>  <span class="c1"># number of the current run
+</span></code></pre></div></div>
+<p><code class="highlighter-rouge">results_dir</code> is the top-level directory containing potentially many experiment-specific folders, where every experiment has a separate folder denoted by <code class="highlighter-rouge">run_name</code>.
+We might want to re-run a specific experiment, and for this reason, every time we run it, <code class="highlighter-rouge">forge</code> creates a folder, whose name is an integral number - the number of this run.
+It starts at one and gets incremented every time we start a new run of the same experiment.
+Instead of starting a new run, we can also resume the last one by passing a flag.
+In this case, we do not create a new folder for it, but use the highest-numbered folder and load the latest model snapshot.</p>
+
+<p>First, we need to import <code class="highlighter-rouge">forge.experiment_tools</code> and define the following flags.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">path</span> <span class="k">as</span> <span class="n">osp</span>
+<span class="kn">from</span> <span class="nn">forge</span> <span class="kn">import</span> <span class="n">experiment_tools</span> <span class="k">as</span> <span class="n">fet</span>
+
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">'results_dir'</span><span class="p">,</span> <span class="s">'../checkpoints'</span><span class="p">,</span> <span class="s">'Top directory for all experimental results.'</span><span class="p">)</span>
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_string</span><span class="p">(</span><span class="s">'run_name'</span><span class="p">,</span> <span class="s">'test_run'</span><span class="p">,</span> <span class="s">'Name of this job. Results will be stored in a corresponding folder.'</span><span class="p">)</span>
+<span class="n">flags</span><span class="o">.</span><span class="n">DEFINE_boolean</span><span class="p">(</span><span class="s">'resume'</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="s">'Tries to resume a job if True.'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>We can then parse the flags and initialise our checkpoint.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">config</span> <span class="o">=</span> <span class="n">forge</span><span class="o">.</span><span class="n">config</span><span class="p">()</span>  <span class="c1"># parse flags
+</span>
+<span class="c1"># initialize smart checkpoint
+</span><span class="n">logdir</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">results_dir</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">run_name</span><span class="p">)</span>
+<span class="n">logdir</span><span class="p">,</span> <span class="n">resume_checkpoint</span> <span class="o">=</span> <span class="n">fet</span><span class="o">.</span><span class="n">init_checkpoint</span><span class="p">(</span><span class="n">logdir</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">data_config</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">model_config</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">resume</span><span class="p">)</span>
+</code></pre></div></div>
+<p><code class="highlighter-rouge">fet.init_checkpoint</code> does a few useful things:</p>
+<ol>
+  <li>Creates the directory structure mentioned above.</li>
+  <li>Copies the data and model config files to the checkpoint folder.</li>
+  <li>Stores all configuration flags <strong>and the hash of the current git commit (if we’re in a git repo, very useful for reproducibility)</strong> in <code class="highlighter-rouge">flags.json</code>, or restores flags if <code class="highlighter-rouge">restore</code> was <code class="highlighter-rouge">True</code>.</li>
+  <li>Figures out whether there exists a model snapshot file that should be loaded.</li>
+</ol>
+
+<p><code class="highlighter-rouge">logdir</code> is the path to our checkpoint folder and evaluates to <code class="highlighter-rouge">results_dir/run_name/&lt;integer&gt;</code>.
+<code class="highlighter-rouge">resume_checkpoint</code> is a path to a checkpoint if <code class="highlighter-rouge">resume</code> was <code class="highlighter-rouge">True</code>, typically <code class="highlighter-rouge">results_dir/run_name/&lt;integer&gt;/model.ckpt-&lt;maximum global step&gt;</code>, or <code class="highlighter-rouge">None</code> otherwise.</p>
+
+<p>Now we need to use <code class="highlighter-rouge">logdir</code> and <code class="highlighter-rouge">resume_checkpoint</code> to store any logs and model snapshots.
+For example:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">...</span>  <span class="c1"># load data/model and do other setup
+</span>
+<span class="c1"># Try to restore the model from a checkpoint
+</span><span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">(</span><span class="n">max_to_keep</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">resume_checkpoint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">"Restoring checkpoint from '{}'"</span><span class="o">.</span><span class="nb">format</span><span class="p">(</span><span class="n">resume_checkpoint</span><span class="p">)</span>
+    <span class="n">saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">resume_checkpoint</span><span class="p">)</span>
+
+<span class="o">...</span>
+  <span class="c1"># somewhere inside the train loop
+</span>  <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">checkpoint_name</span><span class="p">,</span> <span class="n">global_step</span><span class="o">=</span><span class="n">train_itr</span><span class="p">)</span>
+<span class="o">...</span>
+</code></pre></div></div>
+
+<p>If we want to load our model snapshot in another script, <code class="highlighter-rouge">eval.py</code>, say, we can do so in a very straightforward manner.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+<span class="kn">from</span> <span class="nn">forge</span> <span class="kn">import</span> <span class="n">load_from_checkpoint</span>
+
+<span class="n">checkpoint_dir</span> <span class="o">=</span> <span class="s">'../checkpoints/mnist/1'</span>  
+<span class="n">checkpoint_iter</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e4</span><span class="p">)</span>
+
+<span class="c1"># `data` contains any outputs of the data config file
+# `model` contains any outputs of the model config file
+</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">restore_func</span> <span class="o">=</span> <span class="n">load_from_checkpoint</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">,</span> <span class="n">checkpoint_iter</span><span class="p">)</span>
+
+<span class="c1"># Calling `restore_func` restores all model parameters
+</span><span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
+<span class="n">restore_func</span><span class="p">(</span><span class="n">sess</span><span class="p">)</span>
+
+<span class="o">...</span>  <span class="c1"># do exciting stuff with the model
+</span></code></pre></div></div>
+
+<h3 id="working-example">Working Example</h3>
+<p>Code for <code class="highlighter-rouge">forge</code> is available at <a href="https://github.com/akosiorek/forge">github.com/akosiorek/forge</a> and a working example is described in the <code class="highlighter-rouge">README</code>.</p>
+
+<h1 id="closing-thoughts">Closing thoughts</h1>
+<p>Even though experimental code exhibits very similar structure among experiments, there seem to be no tools to streamline the experimentation process.
+This requires ML practitioners to write thousands of lines of boilerplate code, contributes to many errors and generally slows down research progress.
+<code class="highlighter-rouge">forge</code> is my attempt at introducing some good practices as well as simplifying the process.
+Hope you can take something from it for your own purposes.</p>
+
+<!-- #### Acknowledgements
+I would like to thank [Alex Bewley](http://alex.bewley.ai/) for inspiration, [Adam Goliński](http://adamgol.me/) for discussions about software engineering in ML and [Martin Engelcke](https://ori.ox.ac.uk/ori-people/martin-engelcke/) for his feedback on `forge`. -->
+
+
+  </div>
+  
+  <div style="padding: 20px;"></div>
+  
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <!-- <h2 class="footer-heading">Research Notes</h2> -->
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            Research Notes
+          </li>
+
+          <li>
+            <a href="mailto:"></a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>concise research summary drafts(always updating when necessary) and random thoughts
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

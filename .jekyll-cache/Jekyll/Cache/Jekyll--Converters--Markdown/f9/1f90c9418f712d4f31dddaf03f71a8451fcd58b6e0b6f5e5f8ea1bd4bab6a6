@@ -1,0 +1,4 @@
+I"E<p>Normalizing flows allow specifying a series of transformations (hence a flow) to transform a random variable (RV) from a simple probability distribution into one from a potentially very complicated distribution.
+The mappings <script type="math/tex">f</script> used as a part of the flow have to be invertible, at least in principle. Additionally, the Jacobian of every transformation has to be cheap to compute if the flow is to be of any practical value.
+See <a href="http://akosiorek.github.io/ml/2018/04/03/norm_flows.html">my previous post</a> for an overview of flows.</p>
+:ET

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <!-- <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+  <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Semi-supervised learning</title>
+  <meta name="description" content="Basic solution">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/semi_supervised_learning">
+  <link rel="alternate" type="application/rss+xml" title="Research Notes" href="http://localhost:4000/feed.xml">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/css/blogposts.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:4000/resources/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:4000/resources/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:4000/resources/favicon/favicon-16x16.png">
+<link rel="manifest" href="http://localhost:4000/resources/favicon/site.webmanifest">
+<link rel="mask-icon" href="http://localhost:4000/resources/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+<!--https://realfavicongenerator.net/favicon_result?file_id=p1e445a6m31cgavri1pnl1i0nojp6#.Xnjq_5NKhhE
+-->
+</head>
+
+
+  <body>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111274068-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-111274068-3');
+</script>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Research Notes</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">Semi-supervised learning</h1>
+    <p class="post-meta"><time datetime="2020-03-22T15:49:00+01:00" itemprop="datePublished">Mar 22, 2020</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h2 id="basic-solution">Basic solution</h2>
+
+<h4 id="normalization-flow-based">Normalization flow-based</h4>
+
+<p>Train:</p>
+
+<script type="math/tex; mode=display">L(\theta) = \sum_{(x_{i},y_{i}) \in labelled} log p_{\theta} (x_{i}, y_{i}) + \sum_{x_{j} \in unlabelled} log p_{\theta}(x_{j})</script>
+
+<p><script type="math/tex">p_{\theta} (x_{i}, y_{i})</script> can be solved by(1). <em>Hybrid models</em><sup id="fnref:hybridmodel"><a href="#fn:hybridmodel" class="footnote">1</a></sup> or (2). further decomposed as<script type="math/tex">p_{\theta} (x_{i}, y_{i}) = p_{\theta}(y_{i}) * p_{\theta}(x_{i}|y_{i})</script></p>
+
+<p>(1). Hybrid model decompose
+<script type="math/tex">p_{\theta} (x, y)</script>  to  <script type="math/tex">p_{\theta}(x)*p_{\theta}(y|x)</script></p>
+
+<p>This paper  use Generalized Linear Models(GLM) to model 
+ <script type="math/tex">p(y_{i}|x_{i})</script>, P(x) is modeled by Normalization Flow.</p>
+
+<p>(2). <script type="math/tex">p(x)</script> is modeled by normalization flow, <script type="math/tex">p(y|x)</script> is modeled by conditional normalization flow(novelty lies in).</p>
+
+<p>Testing:
+<script type="math/tex">p(y|x) = p(x,y)/p(x)</script></p>
+
+<h2 id="semi-supervised-image-classification">Semi-supervised image classification</h2>
+
+<p>Summmary from FixMatch:</p>
+
+<p><img src="/imgs/fixmatch-compare.png" alt="" /></p>
+
+<p><strong><a href="https://arxiv.org/abs/1904.04717">Label Propagation for Deep Semi-supervised Learning,CVPR19</a></strong></p>
+
+<p><img src="/imgs/lp.png" alt="" /></p>
+
+<p><strong><a href="https://arxiv.org/pdf/1804.09170.pdf">Realistic Evaluation of Deep Semi-Supervised Learning Algorithms,NeuIPS18</a></strong></p>
+
+<p><strong><a href="https://arxiv.org/pdf/2006.09363.pdf">Building One-Shot Semi-supervised (BOSS) Learning up to Fully Supervised Performance,Arxiv2006</a></strong></p>
+
+<p>motivated by barely-supervised learniing in FixMatch.</p>
+
+<p>A combination of fixmatch, self-training, etc.</p>
+
+<p><strong><a href="https://arxiv.org/pdf/2001.07685.pdf">FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence,Arxiv2001</a></strong></p>
+
+<p><img src="/imgs/fixmatch.png" alt="" /></p>
+
+<ul>
+  <li>weak-augmentation-&gt; only flip-and-shift data augmentation.</li>
+  <li>stron-augmentation-&gt; Inspired
+by UDA [45] and ReMixMatch [2], we leverage CutOut
+[13], CTAugment [2], and RandAugment [10] for strong
+augmentation, which all produce heavily distorted versions
+of a given image.</li>
+  <li>Why thresholding?Inspired
+by UDA [45] and ReMixMatch [2], we leverage CutOut
+[13], CTAugment [2], and RandAugment [10] for strong
+augmentation, which all produce heavily distorted versions
+of a given image.</li>
+  <li>basic experimental choices that are
+often ignored or not reported when new SSL methods are
+proposed <strong>(such as the optimizer or learning rate schedule)</strong>
+because we found that they can have an outsized impact on
+performance.</li>
+  <li>weak,weak doesn’t work; weak,strong works.</li>
+  <li>The loss is composed of supervised loss and unsupervised loss. the weight of unsupervised loss should increase gradually by annealing.</li>
+  <li>Detail matters, weight decay regularization is particularly important.</li>
+  <li>SGD is better than Adam. Table 5.</li>
+  <li>use a cosine learning rate decay,Table 6.</li>
+  <li>In summary, we observe that swapping pseudo-labeling for
+sharpening and thresholding would introduce a new hyperparameter while achieving no better performance.</li>
+  <li>Of the aforementioned work, FixMatch bears the closest
+resemblance to two recent algorithms: Unsupervised Data
+Augmentation (UDA) [45] and ReMixMatch [2].</li>
+  <li>………….  We find that to obtain strong results, especially in
+the limited-label regime, certain design choices are often
+underemphasized – most importantly, weight decay and the
+choice of optimizer. The importance of these factors means
+that even when controlling for model architecture as is recommended in [31], the same technique can not always be
+directly compared across different implementations.</li>
+</ul>
+
+<p><strong><a href="https://arxiv.org/pdf/2006.10102.pdf">Rethinking Semi–Supervised Learning in VAEs,Arxiv2006</a></strong></p>
+
+<p><strong><a href="">Semisupervised knowledge transfer for deep learning from private training data.ICLR17 best paper</a></strong></p>
+
+<p>relate SSL and differential privacy</p>
+
+<p><strong><a href="https://arxiv.org/pdf/1905.02249.pdf">MixMatch: A Holistic Approach to Semi-Supervised Learning,NeuIPS19</a></strong></p>
+
+<p><img src="/imgs/mixmatch.png" alt="" />
+<img src="/imgs/mixmatch0.png" alt="" /></p>
+
+<ul>
+  <li>Table 4 is full of information.</li>
+  <li>The relation of privacy-preserving is also interesting.</li>
+  <li>finicky point:mixup has max function to gurantee the mixed result biases towards labelled image x.</li>
+  <li>finicky point： X use shannon-entropy, U use MSE.</li>
+</ul>
+
+<p><strong><a href="https://arxiv.org/pdf/1610.02242.pdf">Temporal Ensembling for Semi-Supervised Learning,ICLR17</a></strong></p>
+
+<p><img src="/imgs/temporal-ensembling.png" alt="" /></p>
+
+<p><script type="math/tex">z_{i}</script> is <script type="math/tex">N \times C</script>, will moving averaged to <script type="math/tex">\tilde{z_{i}}</script>, check alg 1 in the paper.</p>
+
+<p><strong><a href="https://arxiv.org/abs/1703.01780">Mean Teacher,Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results,NIPS17</a></strong></p>
+
+<p>Motivated by Temporal Emsembling. Temporal Emsembling is moving averaged on output, mean teacher is moving averaged on network parameters.</p>
+
+<p>Teacher model is the moving average of student model, do not reverse.</p>
+
+<p><img src="/imgs/mean-teacher.png" alt="" /></p>
+
+<p>mean squared error (MSE) as our consistency cost function, MSE is better than KL-divergence experimentally.</p>
+
+<p>Three different noises <script type="math/tex">\upeta</script> are considered: The model architecture is a 13-layer convolutional neural network (ConvNet) with three types of noise: random translations and horizontal flips of the input images, Gaussian noise on the input layer, and dropout applied within the network.</p>
+
+<p><strong>CutOut</strong></p>
+
+<p><strong>CutMix</strong></p>
+
+<h2 id="semi-supervised-semantic-segmentation">Semi-supervised semantic segmentation</h2>
+
+<p><strong><a href="https://arxiv.org/pdf/1704.03976.pdf">Virtual Adversarial Training:
+A Regularization Method for Supervised and
+Semi-Supervised Learning,PAMI17</a></strong></p>
+
+<ul>
+  <li>interesting and simple idea, high citation.</li>
+</ul>
+
+<p><img src="/imgs/vat.png" alt="" /></p>
+
+<p>sceenshot from <a href="https://arxiv.org/pdf/1905.03670.pdf">S4L: Self-Supervised Semi-Supervised Learning,ICCV19</a></p>
+
+<p><strong>Consistency regularization</strong></p>
+
+<p>Consistency regularization (Sajjadi et al., 2016b; Laine &amp; Aila, 2017; Miyato et al., 2017; Oliver
+et al., 2018) describes a class of semi-supervised learning algorithms that have yielded state-ofthe-art results in semi-supervised classification, while being conceptually simple and often easy to
+implement. The key idea is to encourage the network to give consistent predictions for unlabeled
+inputs that are perturbed in various ways.</p>
+
+<p><strong><a href="http://openaccess.thecvf.com/content_CVPR_2020/papers/Ouali_Semi-Supervised_Semantic_Segmentation_With_Cross-Consistency_Training_CVPR_2020_paper.pdf">Semi-Supervised Semantic Segmentation with Cross-Consistency Training,CVPR20</a></strong></p>
+
+<ul>
+  <li>pertubation function is important</li>
+  <li>Semi-Supervised Domain Adaptation, and combintation with image-level labels is a bonus</li>
+</ul>
+
+<p><strong><a href="https://arxiv.org/pdf/1802.07934.pdf">Adversarial Learning for Semi-Supervised Semantic Segmentation,BMVC18</a></strong></p>
+
+<p><img src="/imgs/adv-semi-seg.png" alt="" /></p>
+
+<p>Pay more attention to <script type="math/tex">L_{semi}</script> loss, by thresholding the output of discriminator network to construct a psydo label.</p>
+
+<p><strong><a href="https://openreview.net/forum?id=B1eBoJStwr">CowMix, Semi-supervised semantic segmentation needs strong, high-dimensional perturbations </a></strong></p>
+
+<blockquote>
+  <p>The use of a rectangular mask restricts the dimensionality of the perturbations that CutOut and
+CutMix can produce. Intuitively, a more complex mask that has more degrees of freedom should
+provide better exploration of the plausible input space. We propose combining the semantic CutOut
+and CutMix regularizers introduced above with a novel mask generation method, giving rise to two
+regularization methods that we dub CowOut and CowMix due to the Friesian cow -like texture of
+the masks.</p>
+</blockquote>
+
+<h2 id="semi-supervised-detection">Semi-supervised detection</h2>
+
+<p><strong><a href="https://papers.nips.cc/paper/9259-consistency-based-semi-supervised-learning-for-object-detection">Consistency-based Semi-supervised Learning for Object Detection,NeurIPS19</a></strong></p>
+
+<p><strong><a href="https://arxiv.org/pdf/2005.04757.pdf">A Simple Semi-Supervised Learning Framework for Object Detection,Arxiv2005</a></strong></p>
+
+<h4 id="footnotes">Footnotes</h4>
+<div class="footnotes">
+  <ol>
+    <li id="fn:hybridmodel">
+      <p>Hybrid Models with Deep and Invertible Features, ICML19. <a href="#fnref:hybridmodel" class="reversefootnote">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+
+
+  </div>
+  
+  <div style="padding: 20px;"></div>
+  
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <!-- <h2 class="footer-heading">Research Notes</h2> -->
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            Research Notes
+          </li>
+
+          <li>
+            <a href="mailto:"></a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>concise research summary drafts(always updating when necessary) and random thoughts
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

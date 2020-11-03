@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+  <!-- <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> -->
+  <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>IAF</title>
+  <meta name="description" content="Autoregressive FlowsEnhancing expressivity of normalising flows is not easy, since we are constrained by functions, whose Jacobians are easy to compute.It tu...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://localhost:4000/notes/iaf/">
+  <link rel="alternate" type="application/rss+xml" title="Research Notes" href="http://localhost:4000/feed.xml">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="/css/blogposts.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:4000/resources/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:4000/resources/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:4000/resources/favicon/favicon-16x16.png">
+<link rel="manifest" href="http://localhost:4000/resources/favicon/site.webmanifest">
+<link rel="mask-icon" href="http://localhost:4000/resources/favicon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+<!--https://realfavicongenerator.net/favicon_result?file_id=p1e445a6m31cgavri1pnl1i0nojp6#.Xnjq_5NKhhE
+-->
+</head>
+
+
+  <body>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-111274068-3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-111274068-3');
+</script>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">Research Notes</a>
+
+    <nav class="site-nav">
+      <a href="#" class="menu-icon">
+        <svg viewBox="0 0 18 15">
+          <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+          <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+          <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+        </svg>
+      </a>
+
+      <div class="trigger">
+        
+          
+          <a class="page-link" href="/about/">About</a>
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+          
+        
+      </div>
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title" itemprop="name headline">IAF</h1>
+    <p class="post-meta"><time datetime="2018-03-18T10:43:00+01:00" itemprop="datePublished">Mar 18, 2018</time></p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <h1 id="autoregressive-flows">Autoregressive Flows</h1>
+<p>Enhancing expressivity of normalising flows is not easy, since we are constrained by functions, whose Jacobians are easy to compute.
+It turns out, though, that we can introduce dependencies between different dimensions of the latent variable, and still end up with a tractable Jacobian.
+Namely, if after a transformation, the dimension <script type="math/tex">i</script> of the resulting variable depends only on dimensions <script type="math/tex">1:i</script> of the input variable, then the Jacobian of this transformation is triangular.
+As we know, a Jacobian of a triangular matrix is equal to the product of the terms on the diagonal.
+More formally, let <script type="math/tex">J \in \mathcal{R}^{d \times d}</script> be the Jacobian of the mapping <script type="math/tex">f</script>, then</p>
+
+<script type="math/tex; mode=display">\mathbf{y}_i = f(\mathbf{z}_{1:i}),
+  \qquad J = \frac{\partial \mathbf{y}}{\partial \mathbf{z}}, \tag{7}</script>
+
+<script type="math/tex; mode=display">\det{J} = \prod_{i=1}^d J_{ii}. \tag{8}</script>
+
+<p>There are three interesting flows that use the above observation, albeit in different ways, and arrive at mappings with very different properties.</p>
+
+<h2 id="real-non-volume-preserving-flows-r-nvp"><a href="https://arxiv.org/abs/1605.08803">Real Non-Volume Preserving Flows (R-NVP)</a></h2>
+<p>R-NVPs are arguably the least expressive but the most generally applicable of the three.
+Let <script type="math/tex">% <![CDATA[
+1 < k < d %]]></script>, <script type="math/tex">\circ</script> element-wise multiplication and <script type="math/tex">\mu</script> and <script type="math/tex">\sigma</script> two mappings <script type="math/tex">\mathcal{R}^k \mapsto \mathcal{R}^{d-k}</script>. R-NVPs are defined as:</p>
+
+<script type="math/tex; mode=display">\mathbf{y}_{1:k} = \mathbf{z}_{1:k},\\
+  \mathbf{y}_{k+1:d} = \mathbf{z}_{k+1:d} \circ \sigma(\mathbf{z}_{1:k}) + \mu(\mathbf{z}_{1:k}). \tag{9}</script>
+
+<p>It is an autoregressive transformation, although not as general as equation (7) allows.
+It copies the first <script type="math/tex">k</script> dimensions, while shifting and scaling all the remaining ones.
+The first part of the Jacobian (up to dimension <script type="math/tex">k</script>) is just an identity matrix, while the second part is lower-triangular with <script type="math/tex">\sigma(\mathbf{z}_{1:k})</script> on the diagonal.
+Hence, the determinant of the Jacobian is</p>
+
+<script type="math/tex; mode=display">\frac{\partial \mathbf{y}}{\partial \mathbf{z}} = \prod_{i=1}^{d-k} \sigma_i(\mathbf{z}_{1:k}). \tag{10}</script>
+
+<p>R-NVPs are particularly attractive, because both sampling and evaluating probability of some external sample are very efficient.
+Computational complexity of both operations is, in fact, exactly the same.
+This allows to use R-NVPs as a parametrisation of an approximate posterior <script type="math/tex">q</script> in VAEs, but also as the output likelihood (in VAEs or general regression models).
+To see this, first note that we can compute all elements of <script type="math/tex">\mu</script> and <script type="math/tex">\sigma</script> in parallel, since all inputs (<script type="math/tex">\mathbf{z}</script>) are available.
+We can therefore compute <script type="math/tex">\mathbf{y}</script> in a single forward pass.
+Next, note that the inverse transformation has the following form, with all divisions done element-wise,</p>
+
+<script type="math/tex; mode=display">\mathbf{z}_{1:k} = \mathbf{y}_{1:k},\\
+\mathbf{z}_{k+1:d} = (\mathbf{y}_{k+1:d} - \mu(\mathbf{y}_{1:k}))~/~\sigma(\mathbf{y}_{1:k}). \tag{11}</script>
+
+<p>The original paper applies several layers of this mapping.
+The authors also reverse the ordering of dimensions after every step.
+This way, variables that are just copied in one step, are transformed in the following step.</p>
+
+<h2 id="autoregressive-transformation">Autoregressive Transformation</h2>
+<p>We can be even more expressive than R-NVPs, but we pay a price.
+Here’s why.</p>
+
+<p>Let <script type="math/tex">\mathbf{\mu} \in \mathbb{R}^d</script> and <script type="math/tex">\mathbf{\sigma} \in \mathbb{R}^d_+</script>.
+Let <script type="math/tex">\mathbf{\epsilon} \sim \mathcal{N} (\mathbf{0}, \mathbf{I}), \mathbf{\epsilon} \in \mathbb{R}^d</script> be a noise vector.
+We can introduce complex dependencies between dimensions of a random variable <script type="math/tex">\mathbf{z} \in \mathbb{R}^d</script> by specifying it in the following way.</p>
+
+<script type="math/tex; mode=display">z_1 = \mu_1 + \sigma_1 \epsilon_1 \tag{12}</script>
+
+<script type="math/tex; mode=display">z_i = \mu (\mathbf{z}_{1:i-1}) + \sigma (\mathbf{z}_{1:i-1}) \epsilon_i \tag{13}</script>
+
+<p>Since each dimension depends only on the previous dimensions, the Jacobian of this transformation is a lower-triangular matrix with <script type="math/tex">\sigma (\mathbf{z}_{1:i-1})</script> on the diagonal (to be derived later); the determinant is just a product of the terms on the diagonal.
+We can sample <script type="math/tex">\mathbf{\epsilon}</script> in parallel (since different dimensions are <em>i.i.d.</em>), but the transformation is inherently sequential. We need to compute all <script type="math/tex">\mathbf{z}_{1:i-1}</script> before computing <script type="math/tex">\mathbf{z}_i</script>, which can be time consuming, and is therefore expensive to use as a parametrisation for the approximate posterior in VAEs.</p>
+
+<p>This is an invertible transformation, and the inverse has the following form.</p>
+
+<script type="math/tex; mode=display">\epsilon_i = \frac{
+    z_i - \mu (\mathbf{z}_{1:i-1})
+  }{
+    \sigma (\mathbf{z}_{1:i-1})
+  } \tag{14}</script>
+
+<p>Given vectors <script type="math/tex">\mathbf{\mu}</script> and <script type="math/tex">\mathbf{\sigma}</script>, we can vectorise the inverse transformations as</p>
+
+<script type="math/tex; mode=display">\mathbf{\epsilon} = \frac{
+    \mathbf{z} - \mathbf{\mu} (\mathbf{z})
+  }{
+    \mathbf{\sigma} (\mathbf{z})
+}. \tag{15}</script>
+
+<p>The Jacobian is again lower-triangular, with <script type="math/tex">\mathbf{\sigma}^{-1}</script> on the diagonal.</p>
+
+<p>The difference between the forward and the inverse transofrmations is that in the forward transformation, statistics used to transform every dimension depend on all the previously transformed dimensions. In the inverse transformation, the statistics used to invert <script type="math/tex">\mathbf{z}</script> (which is the input), depend only on that input, and not on any result of the inversion.</p>
+
+<h2 id="inverse-autoregressive-flow-iaf"><a href="https://arxiv.org/abs/1606.04934">Inverse Autoregressive Flow (IAF)</a></h2>
+<p>IAF builds on equation (14). Let <script type="math/tex">\mathbf{x} \in \mathbb{R}^D</script> be an observation and <script type="math/tex">\mathbf{h} \in \mathbb{R}^n</script> a hidden state. We use a neural network <script type="math/tex">h^\mathrm{enc}_\phi</script> to produce initial statistics and we sample a noise vector from a standard normal.</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{align}
+  \mathbf{\mu}_0, \mathbf{\sigma}_0, \mathbf{h}_0 = &h^\mathrm{enc}_\phi ( \mathbf{x} )\\
+  \mathbf{z}_0 = \mathbf{\mu}_0 + \mathbf{\sigma}_0 \mathbf{\epsilon},
+  \quad &\mathbf{\epsilon} \sim \mathcal{N} (\mathbf{0}, \mathbf{I})
+\end{align} \tag{10} %]]></script>
+
+<p>We then use another neural network <script type="math/tex">R^k_\phi</script> (or a series of them), to parametrise subsequent transformations,</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{align}
+  \mathbf{\mu}_k, \mathbf{\sigma}_k, \mathbf{h}_k &= R^k_\phi ( \mathbf{z}_{k-1}, \mathbf{h}_{k-1} ),\\
+  \mathbf{z}_k &= \mathbf{\mu}_k + \mathbf{\sigma}_k \mathbf{z}_{k-1}.
+\end{align} \tag{11} %]]></script>
+
+<p>Even though the second line of equations (10) and (11) looks more like equation (7), they are really reparamtrised versions of equation (9) - the inverse autoregressive transformation.
+To see this, set <script type="math/tex">\mathbf{z}_k = \epsilon</script>, <script type="math/tex">\mathbf{z}_{k-1} = \mathbf{z}</script>, <script type="math/tex">\mu_k = -\frac{\mu(\mathbf{z})}{\sigma(\mathbf{z})}</script> and <script type="math/tex">\sigma_k = \frac{1}{\sigma(\mathbf{z})}</script>. Substitution gives us:</p>
+
+<script type="math/tex; mode=display">\mathbf{z}_k = \mathbf{\mu}_k + \mathbf{\sigma}_k \mathbf{z}_{k-1}
+  \implies
+  \epsilon = -\frac{\mu(\mathbf{z})}{\sigma(\mathbf{z})} + \frac{1}{\sigma(\mathbf{z})}\mathbf{z} =
+  \frac{\mathbf{z} - \mu(\mathbf{z})}{\sigma(\mathbf{z})} = (7).</script>
+
+<p>This reparametrisation is useful, because it avoids divisions, which can be numerically unstable. This type of autoregressive functions can be efficiently implemented using <a href="https://arxiv.org/abs/1502.03509">MADE</a>-type neural networks, which is nicely explained in <a href="s">this blog post</a>.</p>
+
+<p>To understand how does this transformation affect the distribution of <script type="math/tex">\mathbf{z}</script>, we can compute the resulting probability density function.</p>
+
+<script type="math/tex; mode=display">\log q( \mathbf{\epsilon} ) = \log \mathcal{N} (\mathbf{\epsilon} \mid \mathbf{0}, \mathbf{I}) = - \sum_{i=1}^d \left(
+  \log \epsilon_i + \frac{1}{2} \log 2 \pi \right)
+  = - \frac{d}{2} \log 2 \pi - \sum_{i=1}^d \log \epsilon_i</script>
+
+<p>To factor in subsequent transformations, we need to compute all the Jacobians.</p>
+
+<script type="math/tex; mode=display">\frac{\partial \mathbf{z}_k}{\partial \mathbf{z}_{k-1}}
+  = \underbrace{
+    \frac{\partial \mu_k}{\partial \mathbf{z}_{k-1}}
+  + \frac{\partial \sigma_k}{\partial \mathbf{z}_{k-1}} \mathrm{diag} ( \mathbf{z}_{k-1} )
+}_\text{lower triangular with zeros on the diagonal}
+  + \mathrm{diag}( \sigma_k )
+  \underbrace{
+    \frac{\partial \mathbf{z}_{k-1}}{\partial \mathbf{z}_{k-1}}
+  }_{= \mathbf{I}}</script>
+
+<p>If <script type="math/tex">\mu_k = \mu_k ( \mathbf{z}_{k-1})</script> and <script type="math/tex">\sigma_k = \sigma_k ( \mathbf{z}_{k-1})</script> are implemented as autoregressive transofrmations (with respect to <script type="math/tex">\mathbf{z}_{k-1}</script>), then the first two terms in the Jacobian above are lower triangular matrices with zeros on the diagonal.
+The last term is a diagonal matrix, with <script type="math/tex">\sigma_k</script> on the diagonal.
+Thus, the determinant of the Jacobian is just</p>
+
+<script type="math/tex; mode=display">\mathrm{det} \left( \frac{\partial \mathbf{z}_k}{\partial \mathbf{z}_{k-1}} \right) = \prod_{i=1}^d \sigma_{k, i}.</script>
+
+<p>Therefore, the final log-probability can be written as</p>
+
+<script type="math/tex; mode=display">\log q_K (\mathbf{z}_K) = \log q(\epsilon) - \sum_{k=0}^K \sum_{i=1}^d \log \sigma_{k, i}.</script>
+
+<h3 id="sampling-and-density-evaluation">Sampling and Density Evaluation</h3>
+<p>Sampling is easy, since we just sample <script type="math/tex">\epsilon \sim q(\epsilon)</script> and then forward-transform it into <script type="math/tex">\mathbf{z}_K</script>. Each of the transformations gives us the vector <script type="math/tex">\sigma_k</script>, so that we can readily evaluate the probability of the sample <script type="math/tex">q_K(\mathbf{z}_K)</script>.</p>
+
+<p>To evaluate the density of a sample not taken from <script type="math/tex">q_K</script>, we need to compute the chain of inverse transformations <script type="math/tex">f^{-1}_k</script>, <script type="math/tex">k = K, \dots, 0</script>. To do so, we have to sequentially compute</p>
+
+<script type="math/tex; mode=display">\mathbf{z}_{k-1, 1} = \frac{\mathbf{z}_{k, 1} - \mu_{k, 1}}{\sigma_{k, 1}},\\
+  \mathbf{z}_{k-1, i} = \frac{\mathbf{z}_{k, i} - \mu_{k, i} (\mathbf{z}_{k-1, 1:i-1})}{\sigma_{k, i} (\mathbf{z}_{k-1, 1:i-1})}.</script>
+
+<p>This can be expensive, but as long as <script type="math/tex">\mu</script> and <script type="math/tex">\sigma</script> are implemented as autoregressive transformations, it is possible.</p>
+
+
+  </div>
+  
+  <div style="padding: 20px;"></div>
+  
+
+</article>
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <!-- <h2 class="footer-heading">Research Notes</h2> -->
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li>
+            Research Notes
+          </li>
+
+          <li>
+            <a href="mailto:"></a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-2">
+        <ul class="social-media-list">
+          
+
+          
+        </ul>
+      </div>
+
+      <div class="footer-col footer-col-3">
+        <p>concise research summary drafts(always updating when necessary) and random thoughts
+</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

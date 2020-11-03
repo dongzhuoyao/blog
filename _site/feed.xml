@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Research Notes</title>
+    <description>concise research summary drafts(always updating when necessary) and random thoughts
+</description>
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Tue, 03 Nov 2020 21:13:18 +0100</pubDate>
+    <lastBuildDate>Tue, 03 Nov 2020 21:13:18 +0100</lastBuildDate>
+    <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>Semi-supervised learning</title>
+        <description>&lt;h2 id=&quot;basic-solution&quot;&gt;Basic solution&lt;/h2&gt;
+
+&lt;h4 id=&quot;normalization-flow-based&quot;&gt;Normalization flow-based&lt;/h4&gt;
+
+&lt;p&gt;Train:&lt;/p&gt;
+
+&lt;script type=&quot;math/tex; mode=display&quot;&gt;L(\theta) = \sum_{(x_{i},y_{i}) \in labelled} log p_{\theta} (x_{i}, y_{i}) + \sum_{x_{j} \in unlabelled} log p_{\theta}(x_{j})&lt;/script&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;p_{\theta} (x_{i}, y_{i})&lt;/script&gt; can be solved by(1). &lt;em&gt;Hybrid models&lt;/em&gt;&lt;sup id=&quot;fnref:hybridmodel&quot;&gt;&lt;a href=&quot;#fn:hybridmodel&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; or (2). further decomposed as&lt;script type=&quot;math/tex&quot;&gt;p_{\theta} (x_{i}, y_{i}) = p_{\theta}(y_{i}) * p_{\theta}(x_{i}|y_{i})&lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;(1). Hybrid model decompose
+&lt;script type=&quot;math/tex&quot;&gt;p_{\theta} (x, y)&lt;/script&gt;  to  &lt;script type=&quot;math/tex&quot;&gt;p_{\theta}(x)*p_{\theta}(y|x)&lt;/script&gt;&lt;/p&gt;
+
+&lt;p&gt;This paper  use Generalized Linear Models(GLM) to model 
+ &lt;script type=&quot;math/tex&quot;&gt;p(y_{i}|x_{i})&lt;/script&gt;, P(x) is modeled by Normalization Flow.&lt;/p&gt;
+
+&lt;p&gt;(2). &lt;script type=&quot;math/tex&quot;&gt;p(x)&lt;/script&gt; is modeled by normalization flow, &lt;script type=&quot;math/tex&quot;&gt;p(y|x)&lt;/script&gt; is modeled by conditional normalization flow(novelty lies in).&lt;/p&gt;
+
+&lt;p&gt;Testing:
+&lt;script type=&quot;math/tex&quot;&gt;p(y|x) = p(x,y)/p(x)&lt;/script&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;semi-supervised-image-classification&quot;&gt;Semi-supervised image classification&lt;/h2&gt;
+
+&lt;p&gt;Summmary from FixMatch:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/fixmatch-compare.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/abs/1904.04717&quot;&gt;Label Propagation for Deep Semi-supervised Learning,CVPR19&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/lp.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/1804.09170.pdf&quot;&gt;Realistic Evaluation of Deep Semi-Supervised Learning Algorithms,NeuIPS18&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/2006.09363.pdf&quot;&gt;Building One-Shot Semi-supervised (BOSS) Learning up to Fully Supervised Performance,Arxiv2006&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;motivated by barely-supervised learniing in FixMatch.&lt;/p&gt;
+
+&lt;p&gt;A combination of fixmatch, self-training, etc.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/2001.07685.pdf&quot;&gt;FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence,Arxiv2001&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/fixmatch.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;weak-augmentation-&amp;gt; only flip-and-shift data augmentation.&lt;/li&gt;
+  &lt;li&gt;stron-augmentation-&amp;gt; Inspired
+by UDA [45] and ReMixMatch [2], we leverage CutOut
+[13], CTAugment [2], and RandAugment [10] for strong
+augmentation, which all produce heavily distorted versions
+of a given image.&lt;/li&gt;
+  &lt;li&gt;Why thresholding?Inspired
+by UDA [45] and ReMixMatch [2], we leverage CutOut
+[13], CTAugment [2], and RandAugment [10] for strong
+augmentation, which all produce heavily distorted versions
+of a given image.&lt;/li&gt;
+  &lt;li&gt;basic experimental choices that are
+often ignored or not reported when new SSL methods are
+proposed &lt;strong&gt;(such as the optimizer or learning rate schedule)&lt;/strong&gt;
+because we found that they can have an outsized impact on
+performance.&lt;/li&gt;
+  &lt;li&gt;weak,weak doesn’t work; weak,strong works.&lt;/li&gt;
+  &lt;li&gt;The loss is composed of supervised loss and unsupervised loss. the weight of unsupervised loss should increase gradually by annealing.&lt;/li&gt;
+  &lt;li&gt;Detail matters, weight decay regularization is particularly important.&lt;/li&gt;
+  &lt;li&gt;SGD is better than Adam. Table 5.&lt;/li&gt;
+  &lt;li&gt;use a cosine learning rate decay,Table 6.&lt;/li&gt;
+  &lt;li&gt;In summary, we observe that swapping pseudo-labeling for
+sharpening and thresholding would introduce a new hyperparameter while achieving no better performance.&lt;/li&gt;
+  &lt;li&gt;Of the aforementioned work, FixMatch bears the closest
+resemblance to two recent algorithms: Unsupervised Data
+Augmentation (UDA) [45] and ReMixMatch [2].&lt;/li&gt;
+  &lt;li&gt;………….  We find that to obtain strong results, especially in
+the limited-label regime, certain design choices are often
+underemphasized – most importantly, weight decay and the
+choice of optimizer. The importance of these factors means
+that even when controlling for model architecture as is recommended in [31], the same technique can not always be
+directly compared across different implementations.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/2006.10102.pdf&quot;&gt;Rethinking Semi–Supervised Learning in VAEs,Arxiv2006&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;&quot;&gt;Semisupervised knowledge transfer for deep learning from private training data.ICLR17 best paper&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;relate SSL and differential privacy&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/1905.02249.pdf&quot;&gt;MixMatch: A Holistic Approach to Semi-Supervised Learning,NeuIPS19&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/mixmatch.png&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/imgs/mixmatch0.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Table 4 is full of information.&lt;/li&gt;
+  &lt;li&gt;The relation of privacy-preserving is also interesting.&lt;/li&gt;
+  &lt;li&gt;finicky point:mixup has max function to gurantee the mixed result biases towards labelled image x.&lt;/li&gt;
+  &lt;li&gt;finicky point： X use shannon-entropy, U use MSE.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/1610.02242.pdf&quot;&gt;Temporal Ensembling for Semi-Supervised Learning,ICLR17&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/temporal-ensembling.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;script type=&quot;math/tex&quot;&gt;z_{i}&lt;/script&gt; is &lt;script type=&quot;math/tex&quot;&gt;N \times C&lt;/script&gt;, will moving averaged to &lt;script type=&quot;math/tex&quot;&gt;\tilde{z_{i}}&lt;/script&gt;, check alg 1 in the paper.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/abs/1703.01780&quot;&gt;Mean Teacher,Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results,NIPS17&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Motivated by Temporal Emsembling. Temporal Emsembling is moving averaged on output, mean teacher is moving averaged on network parameters.&lt;/p&gt;
+
+&lt;p&gt;Teacher model is the moving average of student model, do not reverse.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/mean-teacher.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;mean squared error (MSE) as our consistency cost function, MSE is better than KL-divergence experimentally.&lt;/p&gt;
+
+&lt;p&gt;Three different noises &lt;script type=&quot;math/tex&quot;&gt;\upeta&lt;/script&gt; are considered: The model architecture is a 13-layer convolutional neural network (ConvNet) with three types of noise: random translations and horizontal flips of the input images, Gaussian noise on the input layer, and dropout applied within the network.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;CutOut&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;CutMix&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;semi-supervised-semantic-segmentation&quot;&gt;Semi-supervised semantic segmentation&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/1704.03976.pdf&quot;&gt;Virtual Adversarial Training:
+A Regularization Method for Supervised and
+Semi-Supervised Learning,PAMI17&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;interesting and simple idea, high citation.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/vat.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;sceenshot from &lt;a href=&quot;https://arxiv.org/pdf/1905.03670.pdf&quot;&gt;S4L: Self-Supervised Semi-Supervised Learning,ICCV19&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Consistency regularization&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Consistency regularization (Sajjadi et al., 2016b; Laine &amp;amp; Aila, 2017; Miyato et al., 2017; Oliver
+et al., 2018) describes a class of semi-supervised learning algorithms that have yielded state-ofthe-art results in semi-supervised classification, while being conceptually simple and often easy to
+implement. The key idea is to encourage the network to give consistent predictions for unlabeled
+inputs that are perturbed in various ways.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;http://openaccess.thecvf.com/content_CVPR_2020/papers/Ouali_Semi-Supervised_Semantic_Segmentation_With_Cross-Consistency_Training_CVPR_2020_paper.pdf&quot;&gt;Semi-Supervised Semantic Segmentation with Cross-Consistency Training,CVPR20&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;pertubation function is important&lt;/li&gt;
+  &lt;li&gt;Semi-Supervised Domain Adaptation, and combintation with image-level labels is a bonus&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/1802.07934.pdf&quot;&gt;Adversarial Learning for Semi-Supervised Semantic Segmentation,BMVC18&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/imgs/adv-semi-seg.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Pay more attention to &lt;script type=&quot;math/tex&quot;&gt;L_{semi}&lt;/script&gt; loss, by thresholding the output of discriminator network to construct a psydo label.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://openreview.net/forum?id=B1eBoJStwr&quot;&gt;CowMix, Semi-supervised semantic segmentation needs strong, high-dimensional perturbations &lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;The use of a rectangular mask restricts the dimensionality of the perturbations that CutOut and
+CutMix can produce. Intuitively, a more complex mask that has more degrees of freedom should
+provide better exploration of the plausible input space. We propose combining the semantic CutOut
+and CutMix regularizers introduced above with a novel mask generation method, giving rise to two
+regularization methods that we dub CowOut and CowMix due to the Friesian cow -like texture of
+the masks.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;semi-supervised-detection&quot;&gt;Semi-supervised detection&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://papers.nips.cc/paper/9259-consistency-based-semi-supervised-learning-for-object-detection&quot;&gt;Consistency-based Semi-supervised Learning for Object Detection,NeurIPS19&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;a href=&quot;https://arxiv.org/pdf/2005.04757.pdf&quot;&gt;A Simple Semi-Supervised Learning Framework for Object Detection,Arxiv2005&lt;/a&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;footnotes&quot;&gt;Footnotes&lt;/h4&gt;
+&lt;div class=&quot;footnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:hybridmodel&quot;&gt;
+      &lt;p&gt;Hybrid Models with Deep and Invertible Features, ICML19. &lt;a href=&quot;#fnref:hybridmodel&quot; class=&quot;reversefootnote&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+
+</description>
+        <pubDate>Sun, 22 Mar 2020 15:49:00 +0100</pubDate>
+        <link>http://localhost:4000/semi_supervised_learning</link>
+        <guid isPermaLink="true">http://localhost:4000/semi_supervised_learning</guid>
+        
+        
+        <category>ml</category>
+        
+      </item>
+    
+  </channel>
+</rss>

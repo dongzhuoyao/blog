@@ -1,0 +1,7 @@
+I"Z<h1 id="autoregressive-flows">Autoregressive Flows</h1>
+<p>Enhancing expressivity of normalising flows is not easy, since we are constrained by functions, whose Jacobians are easy to compute.
+It turns out, though, that we can introduce dependencies between different dimensions of the latent variable, and still end up with a tractable Jacobian.
+Namely, if after a transformation, the dimension <script type="math/tex">i</script> of the resulting variable depends only on dimensions <script type="math/tex">1:i</script> of the input variable, then the Jacobian of this transformation is triangular.
+As we know, a Jacobian of a triangular matrix is equal to the product of the terms on the diagonal.
+More formally, let <script type="math/tex">J \in \mathcal{R}^{d \times d}</script> be the Jacobian of the mapping <script type="math/tex">f</script>, then</p>
+:ET
